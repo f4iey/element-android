@@ -29,6 +29,8 @@ import im.vector.app.core.di.MavericksAssistedViewModelFactory
 import im.vector.app.core.di.hiltMavericksViewModelFactory
 import im.vector.app.core.extensions.exhaustive
 import im.vector.app.core.platform.VectorViewModel
+import im.vector.app.features.analytics.AnalyticsTracker
+import im.vector.app.features.analytics.plan.CreatedRoom
 import im.vector.app.features.raw.wellknown.getElementWellknown
 import im.vector.app.features.raw.wellknown.isE2EByDefault
 import im.vector.app.features.settings.VectorPreferences
@@ -52,10 +54,12 @@ import org.matrix.android.sdk.api.session.room.model.create.CreateRoomPreset
 import org.matrix.android.sdk.api.session.room.model.create.RestrictedRoomPreset
 import timber.log.Timber
 
-class CreateRoomViewModel @AssistedInject constructor(@Assisted private val initialState: CreateRoomViewState,
-                                                      private val session: Session,
-                                                      private val rawService: RawService,
-                                                      vectorPreferences: VectorPreferences
+class CreateRoomViewModel @AssistedInject constructor(
+        @Assisted private val initialState: CreateRoomViewState,
+        private val session: Session,
+        private val rawService: RawService,
+        private val analyticsTracker: AnalyticsTracker,
+        vectorPreferences: VectorPreferences
 ) : VectorViewModel<CreateRoomViewState, CreateRoomAction, CreateRoomViewEvents>(initialState) {
 
     @AssistedFactory
@@ -297,7 +301,7 @@ class CreateRoomViewModel @AssistedInject constructor(@Assisted private val init
         viewModelScope.launch {
             runCatching { session.createRoom(createRoomParams) }.fold(
                     { roomId ->
-
+                        analyticsTracker.capture(CreatedRoom(isDM = createRoomParams.isDirect.orFalse()))
                         if (initialState.parentSpaceId != null) {
                             // add it as a child
                             try {
