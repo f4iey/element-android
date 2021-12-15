@@ -32,6 +32,8 @@ import im.vector.app.core.di.hiltMavericksViewModelFactory
 import im.vector.app.core.extensions.exhaustive
 import im.vector.app.core.platform.VectorViewModel
 import im.vector.app.core.resources.StringProvider
+import im.vector.app.features.analytics.AnalyticsTracker
+import im.vector.app.features.analytics.extensions.toAnalyticsJoinedRoom
 import im.vector.app.features.displayname.getBestName
 import im.vector.app.features.invite.AutoAcceptInvites
 import im.vector.app.features.settings.VectorPreferences
@@ -56,6 +58,7 @@ class RoomListViewModel @AssistedInject constructor(
         private val stringProvider: StringProvider,
         private val appStateHandler: AppStateHandler,
         private val vectorPreferences: VectorPreferences,
+        private val analyticsTracker: AnalyticsTracker,
         private val autoAcceptInvites: AutoAcceptInvites
 ) : VectorViewModel<RoomListViewState, RoomListAction, RoomListViewEvents>(initialState) {
 
@@ -223,6 +226,7 @@ class RoomListViewModel @AssistedInject constructor(
         viewModelScope.launch {
             try {
                 room.join()
+                analyticsTracker.capture(action.roomSummary.toAnalyticsJoinedRoom())
                 // We do not update the joiningRoomsIds here, because, the room is not joined yet regarding the sync data.
                 // Instead, we wait for the room to be joined
             } catch (failure: Throwable) {
