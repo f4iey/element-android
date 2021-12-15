@@ -46,6 +46,7 @@ import im.vector.app.core.utils.startSharePlainTextIntent
 import im.vector.app.databinding.DialogShareQrCodeBinding
 import im.vector.app.databinding.FragmentMatrixProfileBinding
 import im.vector.app.databinding.ViewStubRoomMemberProfileHeaderBinding
+import im.vector.app.features.analytics.plan.Screen
 import im.vector.app.features.crypto.verification.VerificationBottomSheet
 import im.vector.app.features.displayname.getBestName
 import im.vector.app.features.home.AvatarRenderer
@@ -84,6 +85,11 @@ class RoomMemberProfileFragment @Inject constructor(
     }
 
     override fun getMenuRes() = R.menu.vector_room_member_profile
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        analyticsScreenName = Screen.ScreenName.User
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
