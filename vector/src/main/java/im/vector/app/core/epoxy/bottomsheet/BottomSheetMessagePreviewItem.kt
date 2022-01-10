@@ -102,4 +102,15 @@ abstract class BottomSheetMessagePreviewItem : VectorEpoxyModel<BottomSheetMessa
         val timestamp by bind<TextView>(R.id.bottom_sheet_message_preview_timestamp)
         val imagePreview by bind<ImageView>(R.id.bottom_sheet_message_preview_image)
     }
+
+
+
+
+
 }
+
+
+
+
+
+
