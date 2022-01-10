@@ -3562,9 +3562,6 @@
     <string name="spaces_beta_welcome_to_spaces_desc">Spaces are a new way to group rooms and people.</string>
     <string name="you_are_invited">You are invited</string>
 
-
-    <string name="labs_use_restricted_join_rule">Experimental Space - Restricted Room.</string>
-    <string name="labs_use_restricted_join_rule_desc">Warning requires server support and experimental room version</string>
     <string name="user_invites_you">%s invites you</string>
 
     <string name="looking_for_someone_not_in_space">Looking for someone not in %s?</string>
