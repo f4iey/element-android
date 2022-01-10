@@ -11,8 +11,11 @@
         <domain includeSubdomains="true">127.0.0.1</domain>
         <!-- Localhost for Android emulator -->
         <domain includeSubdomains="true">10.0.2.2</domain>
-        <!-- Onion services -->
-        <domain includeSubdomains="true">onion</domain>
+        <!-- Hamnet addresses -->
+        <domain includeSubdomains="true">44.0.0.1</domain> <!-- domain ampr.org -->
+        <domain includeSubdomains="true">44.168.12.16</domain> <!-- Hamnet FR DNS -->
+        <domain includeSubdomains="true">44.168.30.66</domain> <!-- matrix.f6kgl.ampr.org -->
+        <domain includeSubdomains="true">ampr.org</domain>
 
         <!-- Domains that are used for LANs -->
         <!-- These are IANA recognized special use domain names, see https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml -->
