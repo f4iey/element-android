@@ -24,6 +24,7 @@ import android.os.Build
 import android.view.View
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
+import com.squareup.moshi.Types
 import im.vector.app.BuildConfig
 import im.vector.app.R
 import im.vector.app.core.di.ActiveSessionHolder
@@ -49,7 +50,9 @@ import okhttp3.Response
 import org.json.JSONException
 import org.json.JSONObject
 import org.matrix.android.sdk.api.Matrix
+import org.matrix.android.sdk.api.util.JsonDict
 import org.matrix.android.sdk.api.util.MimeTypes
+import org.matrix.android.sdk.internal.di.MoshiProvider
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
@@ -65,6 +68,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class BugReporter @Inject constructor(
+        private val context: Context,
         private val activeSessionHolder: ActiveSessionHolder,
         private val versionProvider: VersionProvider,
         private val vectorPreferences: VectorPreferences,
@@ -92,6 +96,9 @@ class BugReporter @Inject constructor(
 
     // boolean to cancel the bug report
     private val mIsCancelled = false
+
+    val adapter = MoshiProvider.providesMoshi()
+            .adapter<JsonDict>(Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java))
 
     /**
      * Get current Screenshot
@@ -141,13 +148,12 @@ class BugReporter @Inject constructor(
         /**
          * The bug report upload succeeded.
          */
-        fun onUploadSucceed()
+        fun onUploadSucceed(reportUrl: String?)
     }
 
     /**
      * Send a bug report.
      *
-     * @param context           the application context
      * @param reportType        The report type (bug, suggestion, feedback)
      * @param withDevicesLogs   true to include the device log
      * @param withCrashLogs     true to include the crash logs
@@ -157,8 +163,7 @@ class BugReporter @Inject constructor(
      * @param listener          the listener
      */
     @SuppressLint("StaticFieldLeak")
-    fun sendBugReport(context: Context,
-                      reportType: ReportType,
+    fun sendBugReport(reportType: ReportType,
                       withDevicesLogs: Boolean,
                       withCrashLogs: Boolean,
                       withKeyRequestHistory: Boolean,
@@ -166,15 +171,17 @@ class BugReporter @Inject constructor(
                       theBugDescription: String,
                       serverVersion: String,
                       canContact: Boolean = false,
+                      customFields: Map<String, String>? = null,
                       listener: IMXBugReportListener?) {
         // enumerate files to delete
         val mBugReportFiles: MutableList<File> = ArrayList()
 
         coroutineScope.launch {
             var serverError: String? = null
+            var reportURL: String? = null
             withContext(Dispatchers.IO) {
                 var bugDescription = theBugDescription
-                val crashCallStack = getCrashDescription(context)
+                val crashCallStack = getCrashDescription()
 
                 if (null != crashCallStack) {
                     bugDescription += "\n\n\n\n--------------------------------- crash call stack ---------------------------------\n"
@@ -195,7 +202,7 @@ class BugReporter @Inject constructor(
                 }
 
                 if (!mIsCancelled && (withCrashLogs || withDevicesLogs)) {
-                    val gzippedLogcat = saveLogCat(context, false)
+                    val gzippedLogcat = saveLogCat(false)
 
                     if (null != gzippedLogcat) {
                         if (gzippedFiles.size == 0) {
@@ -205,7 +212,7 @@ class BugReporter @Inject constructor(
                         }
                     }
 
-                    val crashDescription = getCrashFile(context)
+                    val crashDescription = getCrashFile()
                     if (crashDescription.exists()) {
                         val compressedCrashDescription = compressFile(crashDescription)
 
@@ -247,15 +254,17 @@ class BugReporter @Inject constructor(
 
                 if (!mIsCancelled) {
                     val text = when (reportType) {
-                        ReportType.BUG_REPORT -> "[Element] $bugDescription"
-                        ReportType.SUGGESTION -> "[Element] [Suggestion] $bugDescription"
+                        ReportType.BUG_REPORT          -> "[Element] $bugDescription"
+                        ReportType.SUGGESTION          -> "[Element] [Suggestion] $bugDescription"
                         ReportType.SPACE_BETA_FEEDBACK -> "[Element] [spaces-feedback] $bugDescription"
+                        ReportType.AUTO_UISI_SENDER,
+                        ReportType.AUTO_UISI           -> bugDescription
                     }
 
                     // build the multi part request
                     val builder = BugReporterMultipartBody.Builder()
                             .addFormDataPart("text", text)
-                            .addFormDataPart("app", "riot-android")
+                            .addFormDataPart("app", rageShakeAppNameForReport(reportType))
                             .addFormDataPart("user_agent", Matrix.getInstance(context).getUserAgent())
                             .addFormDataPart("user_id", userId)
                             .addFormDataPart("can_contact", canContact.toString())
@@ -273,7 +282,11 @@ class BugReporter @Inject constructor(
                             .addFormDataPart("app_language", VectorLocale.applicationLocale.toString())
                             .addFormDataPart("default_app_language", systemLocaleProvider.getSystemLocale().toString())
                             .addFormDataPart("theme", ThemeUtils.getApplicationTheme(context))
-                            .addFormDataPart("server_version", serverVersion)
+                            .addFormDataPart("server_version", serverVersion).apply {
+                                customFields?.forEach { (name, value) ->
+                                    addFormDataPart(name, value)
+                                }
+                            }
 
                     val buildNumber = context.getString(R.string.build_number)
                     if (buildNumber.isNotEmpty() && buildNumber != "0") {
@@ -321,16 +334,26 @@ class BugReporter @Inject constructor(
                     builder.addFormDataPart("label", "[Element]")
 
                     when (reportType) {
-                        ReportType.BUG_REPORT -> {
+                        ReportType.BUG_REPORT          -> {
                             /* nop */
                         }
-                        ReportType.SUGGESTION -> builder.addFormDataPart("label", "[Suggestion]")
+                        ReportType.SUGGESTION          -> builder.addFormDataPart("label", "[Suggestion]")
                         ReportType.SPACE_BETA_FEEDBACK -> builder.addFormDataPart("label", "spaces-feedback")
+                        ReportType.AUTO_UISI           -> {
+                            builder.addFormDataPart("label", "Z-UISI")
+                            builder.addFormDataPart("label", "android")
+                            builder.addFormDataPart("label", "uisi-recipient")
+                        }
+                        ReportType.AUTO_UISI_SENDER    -> {
+                            builder.addFormDataPart("label", "Z-UISI")
+                            builder.addFormDataPart("label", "android")
+                            builder.addFormDataPart("label", "uisi-sender")
+                        }
                     }
 
-                    if (getCrashFile(context).exists()) {
+                    if (getCrashFile().exists()) {
                         builder.addFormDataPart("label", "crash")
-                        deleteCrashFile(context)
+                        deleteCrashFile()
                     }
 
                     val requestBody = builder.build()
@@ -417,6 +440,10 @@ class BugReporter @Inject constructor(
                                 Timber.e(e, "## sendBugReport() : failed to parse error")
                             }
                         }
+                    } else {
+                        reportURL = response?.body?.string()?.let { stringBody ->
+                            adapter.fromJson(stringBody)?.get("report_url")?.toString()
+                        }
                     }
                 }
             }
@@ -434,7 +461,7 @@ class BugReporter @Inject constructor(
                         if (mIsCancelled) {
                             listener.onUploadCancelled()
                         } else if (null == serverError) {
-                            listener.onUploadSucceed()
+                            listener.onUploadSucceed(reportURL)
                         } else {
                             listener.onUploadFailed(serverError)
                         }
@@ -459,6 +486,17 @@ class BugReporter @Inject constructor(
         activity.startActivity(BugReportActivity.intent(activity, reportType))
     }
 
+    private fun rageShakeAppNameForReport(reportType: ReportType): String {
+        // As per https://github.com/matrix-org/rageshake
+        // app: Identifier for the application (eg 'riot-web').
+        // Should correspond to a mapping configured in the configuration file for github issue reporting to work.
+        // (see R.string.bug_report_url for configured RS server)
+        return context.getString(when (reportType) {
+            ReportType.AUTO_UISI_SENDER,
+            ReportType.AUTO_UISI -> R.string.bug_report_auto_uisi_app_name
+            else                 -> R.string.bug_report_app_name
+        })
+    }
 // ==============================================================================================================
 // crash report management
 // ==============================================================================================================
@@ -466,20 +504,17 @@ class BugReporter @Inject constructor(
     /**
      * Provides the crash file
      *
-     * @param context the context
      * @return the crash file
      */
-    private fun getCrashFile(context: Context): File {
+    private fun getCrashFile(): File {
         return File(context.cacheDir.absolutePath, CRASH_FILENAME)
     }
 
     /**
      * Remove the crash file
-     *
-     * @param context
      */
-    fun deleteCrashFile(context: Context) {
-        val crashFile = getCrashFile(context)
+    fun deleteCrashFile() {
+        val crashFile = getCrashFile()
 
         if (crashFile.exists()) {
             crashFile.delete()
@@ -492,11 +527,10 @@ class BugReporter @Inject constructor(
     /**
      * Save the crash report
      *
-     * @param context          the context
      * @param crashDescription teh crash description
      */
-    fun saveCrashReport(context: Context, crashDescription: String) {
-        val crashFile = getCrashFile(context)
+    fun saveCrashReport(crashDescription: String) {
+        val crashFile = getCrashFile()
 
         if (crashFile.exists()) {
             crashFile.delete()
@@ -514,11 +548,10 @@ class BugReporter @Inject constructor(
     /**
      * Read the crash description file and return its content.
      *
-     * @param context teh context
      * @return the crash description
      */
-    private fun getCrashDescription(context: Context): String? {
-        val crashFile = getCrashFile(context)
+    private fun getCrashDescription(): String? {
+        val crashFile = getCrashFile()
 
         if (crashFile.exists()) {
             try {
@@ -607,11 +640,10 @@ class BugReporter @Inject constructor(
     /**
      * Save the logcat
      *
-     * @param context       the context
      * @param isErrorLogcat true to save the error logcat
      * @return the file if the operation succeeds
      */
-    private fun saveLogCat(context: Context, isErrorLogcat: Boolean): File? {
+    private fun saveLogCat(isErrorLogcat: Boolean): File? {
         val logCatErrFile = File(context.cacheDir.absolutePath, if (isErrorLogcat) LOG_CAT_ERROR_FILENAME else LOG_CAT_FILENAME)
 
         if (logCatErrFile.exists()) {

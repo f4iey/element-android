@@ -7,7 +7,7 @@
     <string name="notice_room_join">انضمّ ⁨%1$s⁩ إلى الغرفة</string>
     <string name="notice_room_leave">غادرَ ⁨%1$s⁩ الغرفة</string>
     <string name="notice_room_reject">رفضَ ⁨%1$s⁩ الدعوة</string>
-    <string name="notice_room_kick">طردَ ⁨%1$s⁩ ⁨%2$s⁩</string>
+    <string name="notice_room_remove">طردَ ⁨%1$s⁩ ⁨%2$s⁩</string>
     <string name="notice_room_unban">رفعَ ⁨%1$s⁩ الحظر عن ⁨%2$s⁩</string>
     <string name="notice_room_ban">حظرَ ⁨%1$s⁩ ⁨%2$s⁩</string>
     <string name="notice_avatar_url_changed">غيّر ⁨%1$s⁩ صورته الشخصية</string>
@@ -69,7 +69,7 @@
     <string name="notice_room_join_by_you">انضممتَ إلى الغرفة</string>
     <string name="notice_room_leave_by_you">غادرتَ الغرفة</string>
     <string name="notice_room_reject_by_you">رفضتَ الدعوة</string>
-    <string name="notice_room_kick_by_you">طردتَ ⁨%1$s⁩</string>
+    <string name="notice_room_remove_by_you">طردتَ ⁨%1$s⁩</string>
     <string name="notice_room_unban_by_you">رفعتَ الحظر عن ⁨%1$s⁩</string>
     <string name="notice_room_ban_by_you">حظرتَ ⁨%1$s⁩</string>
     <string name="notice_room_withdraw_by_you">سحبتَ الدعوة الموجّهة إلى ⁨%1$s⁩</string>
@@ -145,20 +145,20 @@
     <string name="notice_direct_room_join">انضمّ ⁨%1$s⁩</string>
     <string name="notice_direct_room_created_by_you">أنشأتَ النقاش</string>
     <string name="notice_direct_room_created">أنشأ ⁨%1$s⁩ النقاش</string>
-    <string name="notice_room_withdraw_with_reason_by_you">أنتَ قد سحبتَ دعوة %1$s. السبب: %2$s</string>
-    <string name="notice_room_withdraw_with_reason">إنَّ %1$s قد سحبَ دعوة %2$s. السبب: %3$s</string>
+    <string name="notice_room_withdraw_with_reason_by_you">سحبتَ دعوة %1$s. السبب: %2$s</string>
+    <string name="notice_room_withdraw_with_reason">سحبَ %1$s دعوة %2$s. السبب: %3$s</string>
     <string name="notice_room_third_party_revoked_invite_with_reason_by_you">سحبتَ دعوة %1$s للإنضمام إلى الغُرفة. السبب: %2$s</string>
     <string name="notice_room_third_party_revoked_invite_with_reason">سحب %1$s دعوة %2$s للإنضمام إلى الغُرفة. السبب: %3$s</string>
-    <string name="notice_room_third_party_registered_invite_with_reason_by_you">أنتَ قد قبلتَ دعوة %1$s. السبب: %2$s</string>
-    <string name="notice_room_third_party_registered_invite_with_reason">إنَّ %1$s قد قبلَ دعوة %2$s. السبب: %3$s</string>
+    <string name="notice_room_third_party_registered_invite_with_reason_by_you">قبلتَ دعوة %1$s. السبب: %2$s</string>
+    <string name="notice_room_third_party_registered_invite_with_reason">قبلَ %1$s دعوة %2$s. السبب: %3$s</string>
     <string name="notice_room_third_party_invite_with_reason_by_you">أرسلتَ دعوة إلى %1$s للإنضمام إلى الغُرفة. السبب: %2$s</string>
     <string name="notice_room_third_party_invite_with_reason">أرسل %1$s دعوة إلى %2$s للإنضمام إلى الغُرغة. السبب: %3$s</string>
     <string name="notice_room_ban_with_reason_by_you">حظرتَ %1$s. السبب: %2$s</string>
     <string name="notice_room_ban_with_reason">حظر %1$s %2$s. السبب: %3$s</string>
     <string name="notice_room_unban_with_reason_by_you">رفعتَ الحظر عن %1$s. السبب: %2$s</string>
     <string name="notice_room_unban_with_reason">رفع %1$s الحظر عن %2$s. السبب: %3$s</string>
-    <string name="notice_room_kick_with_reason_by_you">طردتَ %1$s. السبب: %2$s</string>
-    <string name="notice_room_kick_with_reason">طرد %1$s %2$s. السبب: %3$s</string>
+    <string name="notice_room_remove_with_reason_by_you">طردتَ %1$s. السبب: %2$s</string>
+    <string name="notice_room_remove_with_reason">طرد %1$s %2$s. السبب: %3$s</string>
     <string name="notice_room_reject_with_reason_by_you">رفضتَ الدعوة. السبب: %1$s</string>
     <string name="notice_room_reject_with_reason">رفض %1$s الدعوة. السبب: %2$s</string>
     <string name="notice_direct_room_leave_with_reason_by_you">غادرتَ. السبب: %1$s</string>
@@ -383,12 +383,10 @@
     <string name="room_creation_add_member">أضِف عضوا</string>
     <string name="room_participants_leave_prompt_title">ترك الغرفة</string>
     <string name="room_participants_leave_prompt_msg">أمتأكّد من ترك الغرفة؟</string>
-    <string name="room_participants_remove_prompt_msg">أمتأكّد من إزالة ⁨%s⁩ من هذه الدردشة؟</string>
     <string name="room_participants_create">أنشئ</string>
     <string name="room_participants_header_admin_tools">أدوات الإدارة</string>
     <string name="room_participants_header_devices">الأجهزة</string>
     <string name="room_participants_action_leave">اترك هذه الغرفة</string>
-    <string name="room_participants_action_remove">أزِل من هذه الغرفة</string>
     <string name="room_participants_action_ban">امنع</string>
     <string name="room_participants_action_unban">ارفع المنع</string>
     <string name="room_participants_action_set_default_power_level">صفّره إلى مستخدم عادي</string>
@@ -780,7 +778,7 @@
     <string name="filter_group_members">رشّح أعضاء المجموعة</string>
     <string name="filter_group_rooms">رشّح غرف المجموعة</string>
     <string name="group_no_long_description">لم يقدّم مدير المجتمع وصفا طويلا عن مجتمعه.</string>
-    <string name="has_been_kicked">لقد طُردت من ⁨%1$s⁩ على يد ⁨%2$s⁩</string>
+    <string name="has_been_removed">لقد طُردت من ⁨%1$s⁩ على يد ⁨%2$s⁩</string>
     <string name="has_been_banned">لقد مُنعت من ⁨%1$s⁩ على يد ⁨%2$s⁩</string>
     <string name="reason_colon">السبب: ⁨%1$s⁩</string>
     <string name="rejoin">أعِد الانضمام</string>
@@ -1056,7 +1054,7 @@
     <string name="command_description_join_room">ينضمّ للغرفة حسب الاختصار المعطى</string>
     <string name="command_description_part_room">اترك الغرفة</string>
     <string name="command_description_topic">اضبط موضوع الغرفة</string>
-    <string name="command_description_kick_user">يطرد المستخدم حسب المعرّف المعطى</string>
+    <string name="command_description_remove_user">يطرد المستخدم حسب المعرّف المعطى</string>
     <string name="command_description_nick">يُغيّر اسم العرض لحسابك</string>
     <string name="command_description_clear_scalar_token">لإصلاح إدارة تطبيقات «ماترِكس»</string>
     <string name="receipt_avatar">شعار الرصيد</string>
@@ -1083,7 +1081,7 @@
     <string name="done">تم</string>
     <string name="dialog_title_error">خطأ</string>
     <string name="settings_call_category">المكالمات</string>
-    <string name="room_participants_action_kick">طرد</string>
+    <string name="room_participants_action_remove">طرد</string>
     <string name="reason_hint">السبب</string>
     <string name="room_sliding_menu_version_x">الإصدار %s</string>
     <string name="settings_notification_advanced">الإعدادات المتقدمة للإشعارات</string>
@@ -1157,7 +1155,6 @@
     <string name="spaces_beta_welcome_to_spaces">مرحبًا بك في المساحات!</string>
     <string name="spaces_beta_welcome_to_spaces_desc">تعد المساحات طريقة جديدة لتجميع الغرف والأشخاص.</string>
     <string name="you_are_invited">أنت مدعو</string>
-    <string name="labs_use_restricted_join_rule">مساحة تجريبية - غُرفة مقيدة.</string>
     <string name="space_mark_as_suggested">علم كمقترحة</string>
     <string name="space_mark_as_not_suggested">علم كغير مقترحة</string>
     <string name="space_manage_rooms_and_spaces">إدارة الغُرف والمساحات</string>
@@ -1169,7 +1166,6 @@
     <string name="this_space_has_no_rooms_not_admin">قد تكون بعض الغُرف مخفية لأنها خاصة وأنك بحاجة إلى دعوة.
 \nليس لديك إذن لإضافة غُرف.</string>
     <string name="this_space_has_no_rooms_admin">قد تكون بعض الغُرف مخفية لأنها خاصة وأنك بحاجة إلى دعوة.</string>
-    <string name="labs_use_restricted_join_rule_desc">يتطلب التحذير دعم الخادم وإصدار الغرفة التجريبية</string>
     <string name="user_invites_you">%s يدعوك</string>
     <string name="looking_for_someone_not_in_space">تبحث عن شخص ما ليس في %s؟</string>
     <string name="space_settings_manage_rooms">إدارة الغُرف</string>
@@ -1332,7 +1328,7 @@
     <string name="room_permissions_notify_everyone">نبّه الكل</string>
     <string name="room_permissions_remove_messages_sent_by_others">أزل رسائل الآخرين</string>
     <string name="room_permissions_ban_users">احظر مستخدمين</string>
-    <string name="room_permissions_kick_users">أطرد مستخدمين</string>
+    <string name="room_permissions_remove_users">أطرد مستخدمين</string>
     <string name="room_permissions_change_settings">غيّر الإعدادات</string>
     <string name="room_permissions_invite_users">أدعوا مستخدمين</string>
     <string name="room_permissions_send_messages">أرسل رسائل</string>
@@ -1342,4 +1338,5 @@
     <string name="keys_backup_unlock_button">فك قفل التأريخ</string>
     <string name="keys_backup_restoring_importing_keys_waiting_message">يستورد المفاتيح…</string>
     <string name="keys_backup_restoring_downloading_backup_waiting_message">ينزّل المفاتيح…</string>
+    <string name="room_error_access_unauthorized">لا يسمح لك بالانضمام لهذه الغرفة</string>
 </resources>
