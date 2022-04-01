@@ -31,7 +31,7 @@ import im.vector.app.features.location.LocationSharingMode
 import im.vector.app.features.login.LoginConfig
 import im.vector.app.features.media.AttachmentData
 import im.vector.app.features.pin.PinMode
-import im.vector.app.features.poll.create.PollMode
+import im.vector.app.features.poll.PollMode
 import im.vector.app.features.roomdirectory.RoomDirectoryData
 import im.vector.app.features.roomdirectory.roompreview.RoomPreviewData
 import im.vector.app.features.settings.VectorSettingsActivity
@@ -50,7 +50,7 @@ interface Navigator {
 
     fun softLogout(context: Context)
 
-    fun openRoom(context: Context, roomId: String, eventId: String? = null, buildTask: Boolean = false)
+    fun openRoom(context: Context, roomId: String, eventId: String? = null, buildTask: Boolean = false, isInviteAlreadyAccepted: Boolean = false)
 
     sealed class PostSwitchSpaceAction {
         object None : PostSwitchSpaceAction()

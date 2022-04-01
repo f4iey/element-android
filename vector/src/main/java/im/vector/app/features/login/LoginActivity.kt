@@ -35,10 +35,10 @@ import im.vector.app.R
 import im.vector.app.core.extensions.POP_BACK_STACK_EXCLUSIVE
 import im.vector.app.core.extensions.addFragment
 import im.vector.app.core.extensions.addFragmentToBackstack
-import im.vector.app.core.extensions.exhaustive
+import im.vector.app.core.extensions.validateBackPressed
 import im.vector.app.core.platform.VectorBaseActivity
 import im.vector.app.databinding.ActivityLoginBinding
-import im.vector.app.features.analytics.plan.Screen
+import im.vector.app.features.analytics.plan.MobileScreen
 import im.vector.app.features.home.HomeActivity
 import im.vector.app.features.login.terms.LoginTermsFragment
 import im.vector.app.features.login.terms.LoginTermsFragmentArgument
@@ -81,7 +81,7 @@ open class LoginActivity : VectorBaseActivity<ActivityLoginBinding>(), UnlockedA
     override fun getCoordinatorLayout() = views.coordinatorLayout
 
     override fun initUiAndData() {
-        analyticsScreenName = Screen.ScreenName.Login
+        analyticsScreenName = MobileScreen.ScreenName.Login
 
         if (isFirstCreation()) {
             addFirstFragment()
@@ -196,14 +196,14 @@ open class LoginActivity : VectorBaseActivity<ActivityLoginBinding>(), UnlockedA
             is LoginViewEvents.Loading                                    ->
                 // This is handled by the Fragments
                 Unit
-        }.exhaustive
+        }
     }
 
     private fun updateWithState(loginViewState: LoginViewState) {
         if (loginViewState.isUserLogged()) {
             if (loginViewState.signMode == SignMode.SignUp) {
                 // change the screen name
-                analyticsScreenName = Screen.ScreenName.Register
+                analyticsScreenName = MobileScreen.ScreenName.Register
             }
             val intent = HomeActivity.newIntent(
                     this,
@@ -259,13 +259,13 @@ open class LoginActivity : VectorBaseActivity<ActivityLoginBinding>(), UnlockedA
                             tag = FRAGMENT_LOGIN_TAG,
                             option = commonOption)
                     LoginMode.Unsupported -> onLoginModeNotSupported(state.loginModeSupportedTypes)
-                }.exhaustive
+                }
             }
             SignMode.SignInWithMatrixId -> addFragmentToBackstack(views.loginFragmentContainer,
                     LoginFragment::class.java,
                     tag = FRAGMENT_LOGIN_TAG,
                     option = commonOption)
-        }.exhaustive
+        }
     }
 
     /**
@@ -277,6 +277,10 @@ open class LoginActivity : VectorBaseActivity<ActivityLoginBinding>(), UnlockedA
         intent?.data
                 ?.let { tryOrNull { it.getQueryParameter("loginToken") } }
                 ?.let { loginViewModel.handle(LoginAction.LoginWithToken(it)) }
+    }
+
+    override fun onBackPressed() {
+        validateBackPressed { super.onBackPressed() }
     }
 
     private fun onRegistrationStageNotSupported() {

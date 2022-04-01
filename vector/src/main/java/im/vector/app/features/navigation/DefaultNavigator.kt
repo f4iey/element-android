@@ -75,9 +75,9 @@ import im.vector.app.features.onboarding.OnboardingActivity
 import im.vector.app.features.pin.PinActivity
 import im.vector.app.features.pin.PinArgs
 import im.vector.app.features.pin.PinMode
+import im.vector.app.features.poll.PollMode
 import im.vector.app.features.poll.create.CreatePollActivity
 import im.vector.app.features.poll.create.CreatePollArgs
-import im.vector.app.features.poll.create.PollMode
 import im.vector.app.features.roomdirectory.RoomDirectoryActivity
 import im.vector.app.features.roomdirectory.RoomDirectoryData
 import im.vector.app.features.roomdirectory.createroom.CreateRoomActivity
@@ -147,13 +147,14 @@ class DefaultNavigator @Inject constructor(
             context: Context,
             roomId: String,
             eventId: String?,
-            buildTask: Boolean
+            buildTask: Boolean,
+            isInviteAlreadyAccepted: Boolean
     ) {
         if (sessionHolder.getSafeActiveSession()?.getRoom(roomId) == null) {
             fatalError("Trying to open an unknown room $roomId", vectorPreferences.failFast())
             return
         }
-        val args = TimelineArgs(roomId, eventId)
+        val args = TimelineArgs(roomId = roomId, eventId = eventId, isInviteAlreadyAccepted = isInviteAlreadyAccepted)
         val intent = RoomDetailActivity.newIntent(context, args)
         startActivity(context, intent, buildTask)
     }
@@ -319,6 +320,7 @@ class DefaultNavigator @Inject constructor(
                     }
                 }
             }
+            null                                -> Unit
         }
     }
 
@@ -375,6 +377,7 @@ class DefaultNavigator @Inject constructor(
                     context.startActivity(intent)
                 }
             }
+            null                                -> Unit
         }
     }
 

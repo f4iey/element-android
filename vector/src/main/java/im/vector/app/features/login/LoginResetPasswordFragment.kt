@@ -23,7 +23,6 @@ import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.mvrx.Fail
 import com.airbnb.mvrx.Loading
-import com.airbnb.mvrx.Success
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import im.vector.app.R
 import im.vector.app.core.extensions.hideKeyboard
@@ -31,7 +30,7 @@ import im.vector.app.core.extensions.hidePassword
 import im.vector.app.core.extensions.isEmail
 import im.vector.app.core.extensions.toReducedUrl
 import im.vector.app.databinding.FragmentLoginResetPasswordBinding
-import im.vector.app.features.analytics.plan.Screen
+import im.vector.app.features.analytics.plan.MobileScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -48,7 +47,7 @@ class LoginResetPasswordFragment @Inject constructor() : AbstractLoginFragment<F
     private var showWarning = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        analyticsScreenName = Screen.ScreenName.ForgotPassword
+        analyticsScreenName = MobileScreen.ScreenName.ForgotPassword
         super.onCreate(savedInstanceState)
     }
 
@@ -129,7 +128,7 @@ class LoginResetPasswordFragment @Inject constructor() : AbstractLoginFragment<F
             is Fail    -> {
                 views.resetPasswordEmailTil.error = errorFormatter.toHumanReadable(state.asyncResetPassword.error)
             }
-            is Success -> Unit
+            else       -> Unit
         }
     }
 }

@@ -24,7 +24,6 @@ import dagger.assisted.AssistedInject
 import im.vector.app.R
 import im.vector.app.core.di.MavericksAssistedViewModelFactory
 import im.vector.app.core.di.hiltMavericksViewModelFactory
-import im.vector.app.core.extensions.exhaustive
 import im.vector.app.core.platform.VectorViewModel
 import im.vector.app.core.resources.StringProvider
 import im.vector.app.features.home.ShortcutCreator
@@ -137,7 +136,7 @@ class RoomProfileViewModel @AssistedInject constructor(
             is RoomProfileAction.ShareRoomProfile            -> handleShareRoomProfile()
             RoomProfileAction.CreateShortcut                 -> handleCreateShortcut()
             RoomProfileAction.RestoreEncryptionState         -> restoreEncryptionState()
-        }.exhaustive
+        }
     }
 
     fun isPublicRoom(): Boolean {
@@ -186,7 +185,7 @@ class RoomProfileViewModel @AssistedInject constructor(
         _viewEvents.post(RoomProfileViewEvents.Loading(stringProvider.getString(R.string.room_profile_leaving_room)))
         viewModelScope.launch {
             try {
-                room.leave(null)
+                session.leaveRoom(room.roomId)
                 // Do nothing, we will be closing the room automatically when it will get back from sync
             } catch (failure: Throwable) {
                 _viewEvents.post(RoomProfileViewEvents.Failure(failure))

@@ -83,7 +83,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
             if (room != null) {
                 session.coroutineScope.launch {
                     tryOrNull {
-                        room.join()
+                        session.joinRoom(room.roomId)
                         analyticsTracker.capture(room.roomSummary().toAnalyticsJoinedRoom())
                     }
                 }
@@ -93,11 +93,8 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
 
     private fun handleRejectRoom(roomId: String) {
         activeSessionHolder.getSafeActiveSession()?.let { session ->
-            val room = session.getRoom(roomId)
-            if (room != null) {
-                session.coroutineScope.launch {
-                    tryOrNull { room.leave() }
-                }
+            session.coroutineScope.launch {
+                tryOrNull { session.leaveRoom(roomId) }
             }
         }
     }
@@ -205,7 +202,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
                 VectorApp.getInstance().notificationDrawerManager.refreshNotificationDrawer(null)
             }
         })
-        */
+         */
     }
 
     private fun getReplyMessage(intent: Intent?): String? {
