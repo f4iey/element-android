@@ -53,3 +53,13 @@ Come chat with the community in the dedicated Matrix [room](https://matrix.to/#/
 Issues are triaged by community members and the Android App Team, following the [triage process](https://github.com/vector-im/element-meta/wiki/Triage-process).
 
 We use [issue labels](https://github.com/vector-im/element-meta/wiki/Issue-labelling) to sort all incoming issues.
+
+# Element Hamnet
+
+This fork of Element aims to be used by amateur radio operators involved in the [Hamnet project](http://ampr.org).
+
+It allows the client to connect to hamnet hosted matrix servers such as *f6kgl.ampr.org* with clear HTTP (encryption is forbidden for ham operators).
+
+## Building
+
+It appears that in Android Studio, commenting a line in `gradle/wrapper/gradle-wrapper.properties` is needed in order to compile with le latest version.
