@@ -105,6 +105,7 @@ import im.vector.app.core.utils.colorizeMatchingText
 import im.vector.app.core.utils.copyToClipboard
 import im.vector.app.core.utils.createJSonViewerStyleProvider
 import im.vector.app.core.utils.createUIHandler
+import im.vector.app.core.utils.isAnimationEnabled
 import im.vector.app.core.utils.isValidUrl
 import im.vector.app.core.utils.onPermissionDeniedDialog
 import im.vector.app.core.utils.onPermissionDeniedSnackbar
@@ -136,6 +137,7 @@ import im.vector.app.features.call.conference.ConferenceEventObserver
 import im.vector.app.features.call.conference.JitsiCallViewModel
 import im.vector.app.features.call.webrtc.WebRtcCallManager
 import im.vector.app.features.command.Command
+import im.vector.app.features.command.ParsedCommand
 import im.vector.app.features.crypto.keysbackup.restore.KeysBackupRestoreActivity
 import im.vector.app.features.crypto.verification.VerificationBottomSheet
 import im.vector.app.features.home.AvatarRenderer
@@ -210,10 +212,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.billcarsonfr.jsonviewer.JSonViewerDialog
 import org.commonmark.parser.Parser
-import org.matrix.android.sdk.api.MatrixConfiguration
 import org.matrix.android.sdk.api.session.Session
 import org.matrix.android.sdk.api.session.content.ContentAttachmentData
 import org.matrix.android.sdk.api.session.events.model.EventType
+import org.matrix.android.sdk.api.session.events.model.content.EncryptedEventContent
+import org.matrix.android.sdk.api.session.events.model.content.WithHeldCode
 import org.matrix.android.sdk.api.session.events.model.toModel
 import org.matrix.android.sdk.api.session.room.model.Membership
 import org.matrix.android.sdk.api.session.room.model.RoomSummary
@@ -237,8 +240,6 @@ import org.matrix.android.sdk.api.session.widgets.model.WidgetType
 import org.matrix.android.sdk.api.util.MatrixItem
 import org.matrix.android.sdk.api.util.MimeTypes
 import org.matrix.android.sdk.api.util.toMatrixItem
-import org.matrix.android.sdk.internal.crypto.model.event.EncryptedEventContent
-import org.matrix.android.sdk.internal.crypto.model.event.WithHeldCode
 import reactivecircus.flowbinding.android.view.focusChanges
 import reactivecircus.flowbinding.android.widget.textChanges
 import timber.log.Timber
@@ -266,8 +267,7 @@ class TimelineFragment @Inject constructor(
         private val pillsPostProcessorFactory: PillsPostProcessor.Factory,
         private val callManager: WebRtcCallManager,
         private val audioMessagePlaybackTracker: AudioMessagePlaybackTracker,
-        private val clock: Clock,
-        private val matrixConfiguration: MatrixConfiguration
+        private val clock: Clock
 ) :
         VectorBaseFragment<FragmentTimelineBinding>(),
         TimelineEventController.Callback,
@@ -297,7 +297,7 @@ class TimelineFragment @Inject constructor(
         private const val ircPattern = " (IRC)"
     }
 
-    private val galleryOrCameraDialogHelper = GalleryOrCameraDialogHelper(this, colorProvider)
+    private val galleryOrCameraDialogHelper = GalleryOrCameraDialogHelper(this, colorProvider, clock)
 
     private val timelineArgs: TimelineArgs by args()
     private val glideRequests by lazy {
@@ -387,6 +387,7 @@ class TimelineFragment @Inject constructor(
         setupEmojiButton()
         setupRemoveJitsiWidgetView()
         setupVoiceMessageView()
+        setupLiveLocationIndicator()
 
         views.includeRoomToolbar.roomToolbarContentView.debouncedClicks {
             navigator.openRoomProfile(requireActivity(), timelineArgs.roomId)
@@ -439,6 +440,7 @@ class TimelineFragment @Inject constructor(
         messageComposerViewModel.observeViewEvents {
             when (it) {
                 is MessageComposerViewEvents.JoinRoomCommandSuccess          -> handleJoinedToAnotherRoom(it)
+                is MessageComposerViewEvents.SlashCommandConfirmationRequest -> handleSlashCommandConfirmationRequest(it)
                 is MessageComposerViewEvents.SendMessageResult               -> renderSendMessageResult(it)
                 is MessageComposerViewEvents.ShowMessage                     -> showSnackWithMessage(it.message)
                 is MessageComposerViewEvents.ShowRoomUpgradeDialog           -> handleShowRoomUpgradeDialog(it)
@@ -495,6 +497,25 @@ class TimelineFragment @Inject constructor(
             handleShareData()
             handleSpaceShare()
         }
+    }
+
+    private fun handleSlashCommandConfirmationRequest(action: MessageComposerViewEvents.SlashCommandConfirmationRequest) {
+        when (action.parsedCommand) {
+            is ParsedCommand.UnignoreUser -> promptUnignoreUser(action.parsedCommand)
+            else                          -> TODO("Add case for ${action.parsedCommand.javaClass.simpleName}")
+        }
+        lockSendButton = false
+    }
+
+    private fun promptUnignoreUser(command: ParsedCommand.UnignoreUser) {
+        MaterialAlertDialogBuilder(requireActivity())
+                .setTitle(R.string.room_participants_action_unignore_title)
+                .setMessage(getString(R.string.settings_unignore_user, command.userId))
+                .setPositiveButton(R.string.unignore) { _, _ ->
+                    messageComposerViewModel.handle(MessageComposerAction.SlashCommandConfirmed(command))
+                }
+                .setNegativeButton(R.string.action_cancel, null)
+                .show()
     }
 
     private fun renderVoiceMessageMode(content: String) {
@@ -566,6 +587,10 @@ class TimelineFragment @Inject constructor(
     }
 
     private fun handleChatEffect(chatEffect: ChatEffect) {
+        if (!requireContext().isAnimationEnabled()) {
+            Timber.d("Do not perform chat effect, animations are disabled.")
+            return
+        }
         when (chatEffect) {
             ChatEffect.CONFETTI -> {
                 views.viewKonfetti.isVisible = true
@@ -646,11 +671,13 @@ class TimelineFragment @Inject constructor(
             ).apply {
                 directListener = { granted ->
                     if (granted) {
-                        timelineViewModel.handle(RoomDetailAction.EnsureNativeWidgetAllowed(
-                                widget = it.widget,
-                                userJustAccepted = true,
-                                grantedEvents = it.grantedEvents
-                        ))
+                        timelineViewModel.handle(
+                                RoomDetailAction.EnsureNativeWidgetAllowed(
+                                        widget = it.widget,
+                                        userJustAccepted = true,
+                                        grantedEvents = it.grantedEvents
+                                )
+                        )
                     }
                 }
             }
@@ -771,25 +798,29 @@ class TimelineFragment @Inject constructor(
 
             override fun onSendVoiceMessage() {
                 messageComposerViewModel.handle(
-                        MessageComposerAction.EndRecordingVoiceMessage(isCancelled = false, rootThreadEventId = getRootThreadEventId()))
+                        MessageComposerAction.EndRecordingVoiceMessage(isCancelled = false, rootThreadEventId = getRootThreadEventId())
+                )
                 updateRecordingUiState(RecordingUiState.Idle)
             }
 
             override fun onDeleteVoiceMessage() {
                 messageComposerViewModel.handle(
-                        MessageComposerAction.EndRecordingVoiceMessage(isCancelled = true, rootThreadEventId = getRootThreadEventId()))
+                        MessageComposerAction.EndRecordingVoiceMessage(isCancelled = true, rootThreadEventId = getRootThreadEventId())
+                )
                 updateRecordingUiState(RecordingUiState.Idle)
             }
 
             override fun onRecordingLimitReached() {
                 messageComposerViewModel.handle(
-                        MessageComposerAction.PauseRecordingVoiceMessage)
+                        MessageComposerAction.PauseRecordingVoiceMessage
+                )
                 updateRecordingUiState(RecordingUiState.Draft)
             }
 
             override fun onRecordingWaveformClicked() {
                 messageComposerViewModel.handle(
-                        MessageComposerAction.PauseRecordingVoiceMessage)
+                        MessageComposerAction.PauseRecordingVoiceMessage
+                )
                 updateRecordingUiState(RecordingUiState.Draft)
             }
 
@@ -807,8 +838,15 @@ class TimelineFragment @Inject constructor(
 
             private fun updateRecordingUiState(state: RecordingUiState) {
                 messageComposerViewModel.handle(
-                        MessageComposerAction.OnVoiceRecordingUiStateChanged(state))
+                        MessageComposerAction.OnVoiceRecordingUiStateChanged(state)
+                )
             }
+        }
+    }
+
+    private fun setupLiveLocationIndicator() {
+        views.locationLiveStatusIndicator.stopButton.debouncedClicks {
+            timelineViewModel.handle(RoomDetailAction.StopLiveLocationSharing)
         }
     }
 
@@ -1417,7 +1455,7 @@ class TimelineFragment @Inject constructor(
                     }
                 }
             }
-            val swipeCallback = RoomMessageTouchHelperCallback(requireContext(), R.drawable.ic_reply, quickReplyHandler)
+            val swipeCallback = RoomMessageTouchHelperCallback(requireContext(), R.drawable.ic_reply, quickReplyHandler, clock)
             val touchHelper = ItemTouchHelper(swipeCallback)
             touchHelper.attachToRecyclerView(views.timelineRecyclerView)
         }
@@ -1501,9 +1539,11 @@ class TimelineFragment @Inject constructor(
                     attachmentTypeSelector = AttachmentTypeSelectorView(vectorBaseActivity, vectorBaseActivity.layoutInflater, this@TimelineFragment)
                     attachmentTypeSelector.setAttachmentVisibility(
                             AttachmentTypeSelectorView.Type.LOCATION,
-                            vectorPreferences.isLocationSharingEnabled())
+                            vectorPreferences.isLocationSharingEnabled()
+                    )
                     attachmentTypeSelector.setAttachmentVisibility(
-                            AttachmentTypeSelectorView.Type.POLL, !isThreadTimeLine())
+                            AttachmentTypeSelectorView.Type.POLL, !isThreadTimeLine()
+                    )
                 }
                 attachmentTypeSelector.show(views.composerLayout.views.attachmentButton)
             }
@@ -1650,7 +1690,7 @@ class TimelineFragment @Inject constructor(
                 views.includeRoomToolbar.roomToolbarContentView.isClickable = roomSummary.membership == Membership.JOIN
                 views.includeRoomToolbar.roomToolbarTitleView.text = roomSummary.displayName
                 avatarRenderer.render(roomSummary.toMatrixItem(), views.includeRoomToolbar.roomToolbarAvatarImageView)
-                val showPresence = roomSummary.isDirect && matrixConfiguration.presenceSyncEnabled
+                val showPresence = roomSummary.isDirect
                 views.includeRoomToolbar.roomToolbarPresenceImageView.render(showPresence, roomSummary.directUserPresence)
                 val shieldView = if (showPresence) views.includeRoomToolbar.roomToolbarTitleShield else views.includeRoomToolbar.roomToolbarAvatarShield
                 shieldView.render(roomSummary.roomEncryptionTrustLevel)
@@ -1681,9 +1721,7 @@ class TimelineFragment @Inject constructor(
                 displayCommandError(getString(R.string.unrecognized_command, sendMessageResult.command))
             }
             is MessageComposerViewEvents.SlashCommandResultOk              -> {
-                dismissLoadingDialog()
-                views.composerLayout.setTextIfDifferent("")
-                sendMessageResult.messageRes?.let { showSnackWithMessage(getString(it)) }
+                handleSlashCommandResultOk(sendMessageResult.parsedCommand)
             }
             is MessageComposerViewEvents.SlashCommandResultError           -> {
                 dismissLoadingDialog()
@@ -1698,6 +1736,17 @@ class TimelineFragment @Inject constructor(
         }
 
         lockSendButton = false
+    }
+
+    private fun handleSlashCommandResultOk(parsedCommand: ParsedCommand) {
+        dismissLoadingDialog()
+        views.composerLayout.setTextIfDifferent("")
+        when (parsedCommand) {
+            is ParsedCommand.SetMarkdown -> {
+                showSnackWithMessage(getString(if (parsedCommand.enable) R.string.markdown_has_been_enabled else R.string.markdown_has_been_disabled))
+            }
+            else                         -> Unit
+        }
     }
 
     private fun displayCommandError(message: String) {
@@ -2151,7 +2200,8 @@ class TimelineFragment @Inject constructor(
                         file = it,
                         title = action.messageContent.body,
                         mediaMimeType = action.messageContent.mimeType ?: getMimeTypeFromUri(requireContext(), it.toUri()),
-                        notificationUtils = notificationUtils
+                        notificationUtils = notificationUtils,
+                        currentTimeMillis = clock.epochMillis()
                 )
             }
                     .onFailure {
@@ -2256,12 +2306,18 @@ class TimelineFragment @Inject constructor(
                 handleCancelSend(action)
             }
             is EventSharedAction.ReportContentSpam          -> {
-                timelineViewModel.handle(RoomDetailAction.ReportContent(
-                        action.eventId, action.senderId, "This message is spam", spam = true))
+                timelineViewModel.handle(
+                        RoomDetailAction.ReportContent(
+                                action.eventId, action.senderId, "This message is spam", spam = true
+                        )
+                )
             }
             is EventSharedAction.ReportContentInappropriate -> {
-                timelineViewModel.handle(RoomDetailAction.ReportContent(
-                        action.eventId, action.senderId, "This message is inappropriate", inappropriate = true))
+                timelineViewModel.handle(
+                        RoomDetailAction.ReportContent(
+                                action.eventId, action.senderId, "This message is inappropriate", inappropriate = true
+                        )
+                )
             }
             is EventSharedAction.ReportContentCustom        -> {
                 promptReasonToReportContent(action)
@@ -2407,29 +2463,30 @@ class TimelineFragment @Inject constructor(
                     displayName = timelineViewModel.getRoomSummary()?.displayName,
                     avatarUrl = timelineViewModel.getRoomSummary()?.avatarUrl,
                     roomEncryptionTrustLevel = timelineViewModel.getRoomSummary()?.roomEncryptionTrustLevel,
-                    rootThreadEventId = rootThreadEventId)
+                    rootThreadEventId = rootThreadEventId
+            )
             navigator.openThread(it, roomThreadDetailArgs)
         }
     }
 
     private fun displayThreadsBetaOptInDialog() {
-            activity?.let {
-                MaterialAlertDialogBuilder(it)
-                        .setTitle(R.string.threads_beta_enable_notice_title)
-                        .setMessage(threadsManager.getBetaEnableThreadsMessage())
-                        .setCancelable(true)
-                        .setNegativeButton(R.string.action_not_now) { _, _ -> }
-                        .setPositiveButton(R.string.action_try_it_out) { _, _ ->
-                            threadsManager.enableThreadsAndRestart(it)
-                        }
-                        .show()
-                        ?.findViewById<TextView>(android.R.id.message)
-                        ?.apply {
-                            linksClickable = true
-                            movementMethod = LinkMovementMethod.getInstance()
-                        }
-            }
+        activity?.let {
+            MaterialAlertDialogBuilder(it)
+                    .setTitle(R.string.threads_beta_enable_notice_title)
+                    .setMessage(threadsManager.getBetaEnableThreadsMessage())
+                    .setCancelable(true)
+                    .setNegativeButton(R.string.action_not_now) { _, _ -> }
+                    .setPositiveButton(R.string.action_try_it_out) { _, _ ->
+                        threadsManager.enableThreadsAndRestart(it)
+                    }
+                    .show()
+                    ?.findViewById<TextView>(android.R.id.message)
+                    ?.apply {
+                        linksClickable = true
+                        movementMethod = LinkMovementMethod.getInstance()
+                    }
         }
+    }
 
     /**
      * Navigate to Threads list for the current room
@@ -2443,7 +2500,8 @@ class TimelineFragment @Inject constructor(
                     roomId = timelineArgs.roomId,
                     displayName = timelineViewModel.getRoomSummary()?.displayName,
                     roomEncryptionTrustLevel = timelineViewModel.getRoomSummary()?.roomEncryptionTrustLevel,
-                    avatarUrl = timelineViewModel.getRoomSummary()?.avatarUrl)
+                    avatarUrl = timelineViewModel.getRoomSummary()?.avatarUrl
+            )
             navigator.openThreadList(it, roomThreadDetailArgs)
         }
     }

@@ -19,6 +19,7 @@ package org.matrix.android.sdk.internal.session.sync.handler.room
 import com.zhuinden.monarchy.Monarchy
 import io.realm.Realm
 import io.realm.kotlin.where
+import org.matrix.android.sdk.api.session.crypto.model.OlmDecryptionResult
 import org.matrix.android.sdk.api.session.events.model.Content
 import org.matrix.android.sdk.api.session.events.model.Event
 import org.matrix.android.sdk.api.session.events.model.EventType
@@ -35,9 +36,8 @@ import org.matrix.android.sdk.api.session.room.model.message.MessageType
 import org.matrix.android.sdk.api.session.room.model.relation.RelationDefaultContent
 import org.matrix.android.sdk.api.session.room.send.SendState
 import org.matrix.android.sdk.api.session.sync.model.SyncResponse
+import org.matrix.android.sdk.api.settings.LightweightSettingsStorage
 import org.matrix.android.sdk.api.util.JsonDict
-import org.matrix.android.sdk.internal.crypto.algorithms.olm.OlmDecryptionResult
-import org.matrix.android.sdk.internal.database.lightweight.LightweightSettingsStorage
 import org.matrix.android.sdk.internal.database.mapper.ContentMapper
 import org.matrix.android.sdk.internal.database.mapper.EventMapper
 import org.matrix.android.sdk.internal.database.mapper.asDomain
@@ -186,7 +186,8 @@ internal class ThreadsAwarenessHandler @Inject constructor(
                     eventBody = eventBody,
                     eventToInject = eventToInject,
                     eventToInjectBody = eventToInjectBody,
-                    threadRelation = threadRelation) ?: return null
+                    threadRelation = threadRelation
+            ) ?: return null
 
             // update the event
             contentForNonEncrypted = updateEventEntity(event, eventEntity, eventPayload, messageTextContent)
@@ -253,7 +254,8 @@ internal class ThreadsAwarenessHandler @Inject constructor(
                     eventBody = newEventBody,
                     eventToInject = event,
                     eventToInjectBody = eventBody,
-                    threadRelation = threadRelation) ?: return null
+                    threadRelation = threadRelation
+            ) ?: return null
 
             return updateEventEntity(newEventFound, eventEntityFound, newEventPayload, messageTextContent)
         }
@@ -309,7 +311,8 @@ internal class ThreadsAwarenessHandler @Inject constructor(
                 userLink,
                 eventIdToInjectSenderId,
                 eventToInjectBody,
-                eventBody)
+                eventBody
+        )
 
         return MessageTextContent(
                 relatesTo = threadRelation,
@@ -330,7 +333,8 @@ internal class ThreadsAwarenessHandler @Inject constructor(
                                         threadRelation: RelationDefaultContent?): String? {
         val replyFormatted = LocalEchoEventFactory.QUOTE_PATTERN.format(
                 "In reply to a thread",
-                eventBody)
+                eventBody
+        )
 
         val messageTextContent = MessageTextContent(
                 relatesTo = threadRelation,

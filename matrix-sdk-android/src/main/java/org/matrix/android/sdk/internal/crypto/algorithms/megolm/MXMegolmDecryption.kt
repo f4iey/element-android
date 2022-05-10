@@ -23,26 +23,26 @@ import kotlinx.coroutines.sync.withLock
 import org.matrix.android.sdk.api.MatrixCoroutineDispatchers
 import org.matrix.android.sdk.api.logger.LoggerTag
 import org.matrix.android.sdk.api.session.crypto.MXCryptoError
+import org.matrix.android.sdk.api.session.crypto.NewSessionListener
+import org.matrix.android.sdk.api.session.crypto.model.ForwardedRoomKeyContent
+import org.matrix.android.sdk.api.session.crypto.model.IncomingRoomKeyRequest
+import org.matrix.android.sdk.api.session.crypto.model.MXEventDecryptionResult
+import org.matrix.android.sdk.api.session.crypto.model.MXUsersDevicesMap
+import org.matrix.android.sdk.api.session.crypto.model.RoomKeyRequestBody
 import org.matrix.android.sdk.api.session.events.model.Event
 import org.matrix.android.sdk.api.session.events.model.EventType
+import org.matrix.android.sdk.api.session.events.model.content.EncryptedEventContent
+import org.matrix.android.sdk.api.session.events.model.content.RoomKeyContent
+import org.matrix.android.sdk.api.session.events.model.content.RoomKeyWithHeldContent
 import org.matrix.android.sdk.api.session.events.model.toModel
 import org.matrix.android.sdk.internal.crypto.DeviceListManager
-import org.matrix.android.sdk.internal.crypto.IncomingRoomKeyRequest
-import org.matrix.android.sdk.internal.crypto.MXEventDecryptionResult
 import org.matrix.android.sdk.internal.crypto.MXOlmDevice
-import org.matrix.android.sdk.internal.crypto.NewSessionListener
 import org.matrix.android.sdk.internal.crypto.OutgoingGossipingRequestManager
 import org.matrix.android.sdk.internal.crypto.actions.EnsureOlmSessionsForDevicesAction
 import org.matrix.android.sdk.internal.crypto.actions.MessageEncrypter
 import org.matrix.android.sdk.internal.crypto.algorithms.IMXDecrypting
 import org.matrix.android.sdk.internal.crypto.algorithms.IMXWithHeldExtension
 import org.matrix.android.sdk.internal.crypto.keysbackup.DefaultKeysBackupService
-import org.matrix.android.sdk.internal.crypto.model.MXUsersDevicesMap
-import org.matrix.android.sdk.internal.crypto.model.event.EncryptedEventContent
-import org.matrix.android.sdk.internal.crypto.model.event.RoomKeyContent
-import org.matrix.android.sdk.internal.crypto.model.event.RoomKeyWithHeldContent
-import org.matrix.android.sdk.internal.crypto.model.rest.ForwardedRoomKeyContent
-import org.matrix.android.sdk.internal.crypto.model.rest.RoomKeyRequestBody
 import org.matrix.android.sdk.internal.crypto.store.IMXCryptoStore
 import org.matrix.android.sdk.internal.crypto.tasks.SendToDeviceTask
 import org.matrix.android.sdk.internal.session.StreamEventsManager
@@ -96,11 +96,13 @@ internal class MXMegolmDecryption(private val userId: String,
         }
 
         return runCatching {
-            olmDevice.decryptGroupMessage(encryptedEventContent.ciphertext,
+            olmDevice.decryptGroupMessage(
+                    encryptedEventContent.ciphertext,
                     event.roomId,
                     timeline,
                     encryptedEventContent.sessionId,
-                    encryptedEventContent.senderKey)
+                    encryptedEventContent.senderKey
+            )
         }
                 .fold(
                         { olmDecryptionResult ->
@@ -132,9 +134,11 @@ internal class MXMegolmDecryption(private val userId: String,
                                             requestKeysForEvent(event, true)
                                         }
                                         // Encapsulate as withHeld exception
-                                        throw MXCryptoError.Base(MXCryptoError.ErrorType.KEYS_WITHHELD,
+                                        throw MXCryptoError.Base(
+                                                MXCryptoError.ErrorType.KEYS_WITHHELD,
                                                 withHeldInfo.code?.value ?: "",
-                                                withHeldInfo.reason)
+                                                withHeldInfo.reason
+                                        )
                                     }
 
                                     if (requestKeysOnFail) {
@@ -144,7 +148,8 @@ internal class MXMegolmDecryption(private val userId: String,
                                     throw MXCryptoError.Base(
                                             MXCryptoError.ErrorType.UNKNOWN_MESSAGE_INDEX,
                                             "UNKNOWN_MESSAGE_INDEX",
-                                            null)
+                                            null
+                                    )
                                 }
 
                                 val reason = String.format(MXCryptoError.OLM_REASON, throwable.olmException.message)
@@ -153,7 +158,8 @@ internal class MXMegolmDecryption(private val userId: String,
                                 throw MXCryptoError.Base(
                                         MXCryptoError.ErrorType.OLM,
                                         reason,
-                                        detailedReason)
+                                        detailedReason
+                                )
                             }
                             if (throwable is MXCryptoError.Base) {
                                 if (
@@ -166,9 +172,11 @@ internal class MXMegolmDecryption(private val userId: String,
                                             requestKeysForEvent(event, true)
                                         }
                                         // Encapsulate as withHeld exception
-                                        throw MXCryptoError.Base(MXCryptoError.ErrorType.KEYS_WITHHELD,
+                                        throw MXCryptoError.Base(
+                                                MXCryptoError.ErrorType.KEYS_WITHHELD,
                                                 withHeldInfo.code?.value ?: "",
-                                                withHeldInfo.reason)
+                                                withHeldInfo.reason
+                                        )
                                     } else {
                                         // This is un-used in Matrix Android SDK2, not sure if needed
                                         // addEventToPendingList(event, timeline)
@@ -298,13 +306,15 @@ internal class MXMegolmDecryption(private val userId: String,
         }
 
         Timber.tag(loggerTag.value).i("onRoomKeyEvent addInboundGroupSession ${roomKeyContent.sessionId}")
-        val added = olmDevice.addInboundGroupSession(roomKeyContent.sessionId,
+        val added = olmDevice.addInboundGroupSession(
+                roomKeyContent.sessionId,
                 roomKeyContent.sessionKey,
                 roomKeyContent.roomId,
                 senderKey,
                 forwardingCurve25519KeyChain,
                 keysClaimed,
-                exportFormat)
+                exportFormat
+        )
 
         if (added) {
             defaultKeysBackupService.maybeBackupKeys()

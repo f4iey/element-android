@@ -21,10 +21,10 @@ import org.matrix.android.sdk.api.session.crypto.verification.CancelCode
 import org.matrix.android.sdk.api.session.crypto.verification.QrCodeVerificationTransaction
 import org.matrix.android.sdk.api.session.crypto.verification.VerificationTxState
 import org.matrix.android.sdk.api.session.events.model.EventType
+import org.matrix.android.sdk.api.util.fromBase64
 import org.matrix.android.sdk.internal.crypto.IncomingGossipingRequestManager
 import org.matrix.android.sdk.internal.crypto.OutgoingGossipingRequestManager
 import org.matrix.android.sdk.internal.crypto.actions.SetDeviceVerificationAction
-import org.matrix.android.sdk.internal.crypto.crosssigning.fromBase64
 import org.matrix.android.sdk.internal.crypto.crosssigning.fromBase64Safe
 import org.matrix.android.sdk.internal.crypto.store.IMXCryptoStore
 import org.matrix.android.sdk.internal.crypto.verification.DefaultVerificationTransaction
@@ -54,7 +54,8 @@ internal class DefaultQrCodeVerificationTransaction(
         transactionId,
         otherUserId,
         otherDeviceId,
-        isIncoming),
+        isIncoming
+),
         QrCodeVerificationTransaction {
 
     override val qrCodeText: String?

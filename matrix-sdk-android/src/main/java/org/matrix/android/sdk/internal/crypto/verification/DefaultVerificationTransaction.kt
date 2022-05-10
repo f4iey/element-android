@@ -17,12 +17,12 @@ package org.matrix.android.sdk.internal.crypto.verification
 
 import org.matrix.android.sdk.api.MatrixCallback
 import org.matrix.android.sdk.api.session.crypto.crosssigning.CrossSigningService
+import org.matrix.android.sdk.api.session.crypto.crosssigning.DeviceTrustLevel
 import org.matrix.android.sdk.api.session.crypto.verification.VerificationTransaction
 import org.matrix.android.sdk.api.session.crypto.verification.VerificationTxState
 import org.matrix.android.sdk.internal.crypto.IncomingGossipingRequestManager
 import org.matrix.android.sdk.internal.crypto.OutgoingGossipingRequestManager
 import org.matrix.android.sdk.internal.crypto.actions.SetDeviceVerificationAction
-import org.matrix.android.sdk.internal.crypto.crosssigning.DeviceTrustLevel
 import timber.log.Timber
 
 /**
@@ -105,8 +105,10 @@ internal abstract class DefaultVerificationTransaction(
 
     private fun setDeviceVerified(userId: String, deviceId: String) {
         // TODO should not override cross sign status
-        setDeviceVerificationAction.handle(DeviceTrustLevel(crossSigningVerified = false, locallyVerified = true),
+        setDeviceVerificationAction.handle(
+                DeviceTrustLevel(crossSigningVerified = false, locallyVerified = true),
                 userId,
-                deviceId)
+                deviceId
+        )
     }
 }

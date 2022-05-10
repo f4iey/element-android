@@ -26,13 +26,20 @@ import org.matrix.android.sdk.api.MatrixCoroutineDispatchers
 import org.matrix.android.sdk.api.auth.UserInteractiveAuthInterceptor
 import org.matrix.android.sdk.api.extensions.orFalse
 import org.matrix.android.sdk.api.session.crypto.crosssigning.CrossSigningService
+import org.matrix.android.sdk.api.session.crypto.crosssigning.DeviceTrustLevel
+import org.matrix.android.sdk.api.session.crypto.crosssigning.DeviceTrustResult
 import org.matrix.android.sdk.api.session.crypto.crosssigning.MXCrossSigningInfo
+import org.matrix.android.sdk.api.session.crypto.crosssigning.PrivateKeysInfo
+import org.matrix.android.sdk.api.session.crypto.crosssigning.UserTrustResult
+import org.matrix.android.sdk.api.session.crypto.crosssigning.isCrossSignedVerified
+import org.matrix.android.sdk.api.session.crypto.crosssigning.isLocallyVerified
+import org.matrix.android.sdk.api.session.crypto.crosssigning.isVerified
+import org.matrix.android.sdk.api.session.crypto.model.CryptoDeviceInfo
 import org.matrix.android.sdk.api.util.Optional
+import org.matrix.android.sdk.api.util.fromBase64
 import org.matrix.android.sdk.internal.crypto.DeviceListManager
-import org.matrix.android.sdk.internal.crypto.model.CryptoDeviceInfo
 import org.matrix.android.sdk.internal.crypto.model.rest.UploadSignatureQueryBuilder
 import org.matrix.android.sdk.internal.crypto.store.IMXCryptoStore
-import org.matrix.android.sdk.internal.crypto.store.PrivateKeysInfo
 import org.matrix.android.sdk.internal.crypto.tasks.InitializeCrossSigningTask
 import org.matrix.android.sdk.internal.crypto.tasks.UploadSignaturesTask
 import org.matrix.android.sdk.internal.di.SessionId
@@ -559,8 +566,10 @@ internal class DefaultCrossSigningService @Inject constructor(
             }
 
             // Sign the other MasterKey with our UserSigning key
-            val newSignature = JsonCanonicalizer.getCanonicalJson(Map::class.java,
-                    otherMasterKeys.signalableJSONDictionary()).let { userPkSigning?.sign(it) }
+            val newSignature = JsonCanonicalizer.getCanonicalJson(
+                    Map::class.java,
+                    otherMasterKeys.signalableJSONDictionary()
+            ).let { userPkSigning?.sign(it) }
 
             if (newSignature == null) {
                 // race??
@@ -677,7 +686,8 @@ internal class DefaultCrossSigningService @Inject constructor(
         val otherSSKSignature = otherDevice.signatures?.get(otherUserId)?.get("ed25519:${otherKeys.selfSigningKey()?.unpaddedBase64PublicKey}")
                 ?: return legacyFallbackTrust(
                         locallyTrusted,
-                        DeviceTrustResult.MissingDeviceSignature(otherDeviceId, otherKeys.selfSigningKey()
+                        DeviceTrustResult.MissingDeviceSignature(
+                                otherDeviceId, otherKeys.selfSigningKey()
                                 ?.unpaddedBase64PublicKey
                                 ?: ""
                         )
@@ -726,7 +736,8 @@ internal class DefaultCrossSigningService @Inject constructor(
         val otherSSKSignature = otherDevice.signatures?.get(otherKeys.userId)?.get("ed25519:${otherKeys.selfSigningKey()?.unpaddedBase64PublicKey}")
                 ?: return legacyFallbackTrust(
                         locallyTrusted,
-                        DeviceTrustResult.MissingDeviceSignature(otherDevice.deviceId, otherKeys.selfSigningKey()
+                        DeviceTrustResult.MissingDeviceSignature(
+                                otherDevice.deviceId, otherKeys.selfSigningKey()
                                 ?.unpaddedBase64PublicKey
                                 ?: ""
                         )

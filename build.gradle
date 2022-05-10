@@ -5,7 +5,10 @@ buildscript {
     apply from: 'dependencies_groups.gradle'
 
     repositories {
-        google()
+        // Do not use `google()`, it prevents Dependabot from working properly
+        maven {
+            url 'https://maven.google.com'
+        }
         maven {
             url "https://plugins.gradle.org/m2/"
         }
@@ -21,7 +24,8 @@ buildscript {
         classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.3'
         classpath 'com.google.android.gms:oss-licenses-plugin:0.10.5'
         classpath "com.likethesalad.android:stem-plugin:2.0.0"
-        classpath 'org.owasp:dependency-check-gradle:7.0.4.1'
+        classpath 'org.owasp:dependency-check-gradle:7.1.0.1'
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.6.21"
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -29,7 +33,7 @@ buildscript {
 
 // ktlint Plugin
 plugins {
-    id "org.jlleitschuh.gradle.ktlint" version "10.2.1"
+    id "org.jlleitschuh.gradle.ktlint" version "10.3.0"
 }
 
 // https://github.com/jeremylong/DependencyCheck
@@ -46,7 +50,9 @@ allprojects {
     apply plugin: "org.jlleitschuh.gradle.ktlint"
 
     repositories {
-        mavenCentral {
+        // Do not use `mavenCentral()`, it prevents Dependabot from working properly
+        maven {
+            url 'https://repo1.maven.org/maven2'
             content {
                 groups.mavenCentral.regex.each { includeGroupByRegex it }
                 groups.mavenCentral.group.each { includeGroup it }
@@ -69,14 +75,18 @@ allprojects {
                 groups.jitsi.group.each { includeGroup it }
             }
         }
-        google {
+        // Do not use `google()`, it prevents Dependabot from working properly
+        maven {
+            url 'https://maven.google.com'
             content {
                 groups.google.regex.each { includeGroupByRegex it }
                 groups.google.group.each { includeGroup it }
             }
         }
         //noinspection JcenterRepositoryObsolete
-        jcenter {
+        // Do not use `jcenter`, it prevents Dependabot from working properly
+        maven {
+            url 'https://jcenter.bintray.com'
             content {
                 groups.jcenter.regex.each { includeGroupByRegex it }
                 groups.jcenter.group.each { includeGroup it }
@@ -105,6 +115,12 @@ allprojects {
         // display the corresponding rule
         verbose = true
         disabledRules = [
+                // TODO: Re-enable these 4 rules after reformatting project
+                "indent",
+                "experimental:argument-list-wrapping",
+                "max-line-length",
+                "parameter-list-wrapping",
+
                 "spacing-between-declarations-with-comments",
                 "no-multi-spaces",
                 "experimental:spacing-between-declarations-with-annotations",

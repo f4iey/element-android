@@ -34,12 +34,14 @@ import org.matrix.android.sdk.api.auth.UIABaseAuth
 import org.matrix.android.sdk.api.auth.UserInteractiveAuthInterceptor
 import org.matrix.android.sdk.api.auth.UserPasswordAuth
 import org.matrix.android.sdk.api.auth.registration.RegistrationFlowResponse
+import org.matrix.android.sdk.api.session.crypto.crosssigning.isCrossSignedVerified
+import org.matrix.android.sdk.api.session.crypto.crosssigning.isVerified
+import org.matrix.android.sdk.api.session.crypto.model.CryptoDeviceInfo
+import org.matrix.android.sdk.api.session.crypto.model.MXUsersDevicesMap
 import org.matrix.android.sdk.common.CommonTestHelper
 import org.matrix.android.sdk.common.CryptoTestHelper
 import org.matrix.android.sdk.common.SessionTestParams
 import org.matrix.android.sdk.common.TestConstants
-import org.matrix.android.sdk.internal.crypto.model.CryptoDeviceInfo
-import org.matrix.android.sdk.internal.crypto.model.MXUsersDevicesMap
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 
@@ -108,11 +110,13 @@ class XSigningTest : InstrumentedTest {
                 }
             }, it)
         }
-        testHelper.doSync<Unit> { bobSession.cryptoService().crossSigningService().initializeCrossSigning(object : UserInteractiveAuthInterceptor {
-            override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
-                promise.resume(bobAuthParams)
-            }
-        }, it) }
+        testHelper.doSync<Unit> {
+            bobSession.cryptoService().crossSigningService().initializeCrossSigning(object : UserInteractiveAuthInterceptor {
+                override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
+                    promise.resume(bobAuthParams)
+                }
+            }, it)
+        }
 
         // Check that alice can see bob keys
         testHelper.doSync<MXUsersDevicesMap<CryptoDeviceInfo>> { aliceSession.cryptoService().downloadKeys(listOf(bobSession.myUserId), true, it) }
@@ -122,8 +126,16 @@ class XSigningTest : InstrumentedTest {
         assertNull("Alice should not see bob User key", bobKeysFromAlicePOV.userKey())
         assertNotNull("Alice can see bob SelfSigned key", bobKeysFromAlicePOV.selfSigningKey())
 
-        assertEquals("Bob keys from alice pov should match", bobKeysFromAlicePOV.masterKey()?.unpaddedBase64PublicKey, bobSession.cryptoService().crossSigningService().getMyCrossSigningKeys()?.masterKey()?.unpaddedBase64PublicKey)
-        assertEquals("Bob keys from alice pov should match", bobKeysFromAlicePOV.selfSigningKey()?.unpaddedBase64PublicKey, bobSession.cryptoService().crossSigningService().getMyCrossSigningKeys()?.selfSigningKey()?.unpaddedBase64PublicKey)
+        assertEquals(
+                "Bob keys from alice pov should match",
+                bobKeysFromAlicePOV.masterKey()?.unpaddedBase64PublicKey,
+                bobSession.cryptoService().crossSigningService().getMyCrossSigningKeys()?.masterKey()?.unpaddedBase64PublicKey
+        )
+        assertEquals(
+                "Bob keys from alice pov should match",
+                bobKeysFromAlicePOV.selfSigningKey()?.unpaddedBase64PublicKey,
+                bobSession.cryptoService().crossSigningService().getMyCrossSigningKeys()?.selfSigningKey()?.unpaddedBase64PublicKey
+        )
 
         assertFalse("Bob keys from alice pov should not be trusted", bobKeysFromAlicePOV.isTrusted())
 
@@ -147,16 +159,20 @@ class XSigningTest : InstrumentedTest {
                 password = TestConstants.PASSWORD
         )
 
-        testHelper.doSync<Unit> { aliceSession.cryptoService().crossSigningService().initializeCrossSigning(object : UserInteractiveAuthInterceptor {
-            override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
-                promise.resume(aliceAuthParams)
-            }
-        }, it) }
-        testHelper.doSync<Unit> { bobSession.cryptoService().crossSigningService().initializeCrossSigning(object : UserInteractiveAuthInterceptor {
-            override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
-                promise.resume(bobAuthParams)
-            }
-        }, it) }
+        testHelper.doSync<Unit> {
+            aliceSession.cryptoService().crossSigningService().initializeCrossSigning(object : UserInteractiveAuthInterceptor {
+                override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
+                    promise.resume(aliceAuthParams)
+                }
+            }, it)
+        }
+        testHelper.doSync<Unit> {
+            bobSession.cryptoService().crossSigningService().initializeCrossSigning(object : UserInteractiveAuthInterceptor {
+                override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
+                    promise.resume(bobAuthParams)
+                }
+            }, it)
+        }
 
         // Check that alice can see bob keys
         val bobUserId = bobSession.myUserId

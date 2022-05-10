@@ -21,11 +21,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.matrix.android.sdk.api.MatrixCoroutineDispatchers
 import org.matrix.android.sdk.api.logger.LoggerTag
+import org.matrix.android.sdk.api.session.crypto.model.CryptoDeviceInfo
+import org.matrix.android.sdk.api.session.crypto.model.MXUsersDevicesMap
 import org.matrix.android.sdk.internal.crypto.MXOlmDevice
-import org.matrix.android.sdk.internal.crypto.model.CryptoDeviceInfo
 import org.matrix.android.sdk.internal.crypto.model.MXKey
 import org.matrix.android.sdk.internal.crypto.model.MXOlmSessionResult
-import org.matrix.android.sdk.internal.crypto.model.MXUsersDevicesMap
 import org.matrix.android.sdk.internal.crypto.tasks.ClaimOneTimeKeysForUsersDeviceTask
 import org.matrix.android.sdk.internal.session.SessionScope
 import timber.log.Timber
@@ -137,10 +137,14 @@ internal class EnsureOlmSessionsForDevicesAction @Inject constructor(
                 olmDevice.verifySignature(fingerprint, oneTimeKey.signalableJSONDictionary(), signature)
                 isVerified = true
             } catch (e: Exception) {
-                Timber.tag(loggerTag.value).d(e, "verifyKeyAndStartSession() : Verify error for otk: ${oneTimeKey.signalableJSONDictionary()}," +
-                        " signature:$signature fingerprint:$fingerprint")
-                Timber.tag(loggerTag.value).e("verifyKeyAndStartSession() : Verify error for ${deviceInfo.userId}|${deviceInfo.deviceId} " +
-                        " - signable json ${oneTimeKey.signalableJSONDictionary()}")
+                Timber.tag(loggerTag.value).d(
+                        e, "verifyKeyAndStartSession() : Verify error for otk: ${oneTimeKey.signalableJSONDictionary()}," +
+                        " signature:$signature fingerprint:$fingerprint"
+                )
+                Timber.tag(loggerTag.value).e(
+                        "verifyKeyAndStartSession() : Verify error for ${deviceInfo.userId}|${deviceInfo.deviceId} " +
+                                " - signable json ${oneTimeKey.signalableJSONDictionary()}"
+                )
                 errorMessage = e.message
             }
 

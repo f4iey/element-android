@@ -18,7 +18,7 @@ ext.versionMinor = 4
 // Note: even values are reserved for regular release, odd values for hotfix release.
 // When creating a hotfix, you should decrease the value, since the current value
 // is the value for the next regular release.
-ext.versionPatch = 12
+ext.versionPatch = 16
 
 static def getGitTimestamp() {
     def cmd = 'git show -s --format=%ct'
@@ -151,7 +151,6 @@ android {
 
         buildConfigField "Boolean", "enableLocationSharing", "true"
         buildConfigField "String", "mapTilerKey", "\"fU3vlMsMn4Jb6dnEIFsx\""
-        buildConfigField "Boolean", "PRESENCE_SYNC_ENABLED", "true"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -230,7 +229,6 @@ android {
             buildConfigField "boolean", "LOW_PRIVACY_LOG_ENABLE", "false"
             // Set to true if you want to enable strict mode in debug
             buildConfigField "boolean", "ENABLE_STRICT_MODE_LOGS", "false"
-            buildConfigField "Boolean", "ENABLE_LIVE_LOCATION_SHARING", "true"
 
             signingConfig signingConfigs.debug
         }
@@ -240,7 +238,6 @@ android {
 
             buildConfigField "boolean", "LOW_PRIVACY_LOG_ENABLE", "false"
             buildConfigField "boolean", "ENABLE_STRICT_MODE_LOGS", "false"
-            buildConfigField "Boolean", "ENABLE_LIVE_LOCATION_SHARING", "false"
 
             postprocessing {
                 removeUnusedCode true
@@ -346,11 +343,11 @@ dependencies {
     implementation libs.androidx.constraintLayout
     implementation "androidx.sharetarget:sharetarget:1.1.0"
     implementation libs.androidx.core
-    implementation "androidx.media:media:1.4.3"
+    implementation "androidx.media:media:1.6.0"
     implementation "androidx.transition:transition:1.4.1"
 
     implementation "org.threeten:threetenbp:1.4.0:no-tzdb"
-    implementation "com.gabrielittner.threetenbp:lazythreetenbp:0.9.0"
+    implementation "com.gabrielittner.threetenbp:lazythreetenbp:0.10.0"
 
     implementation libs.squareup.moshi
     kapt libs.squareup.moshiKotlin
@@ -371,7 +368,7 @@ dependencies {
     implementation 'com.facebook.stetho:stetho:1.6.0'
 
     // Phone number https://github.com/google/libphonenumber
-    implementation 'com.googlecode.libphonenumber:libphonenumber:8.12.46'
+    implementation 'com.googlecode.libphonenumber:libphonenumber:8.12.48'
 
     // FlowBinding
     implementation libs.github.flowBinding
@@ -416,10 +413,10 @@ dependencies {
     implementation 'androidx.browser:browser:1.4.0'
 
     // Passphrase strength helper
-    implementation 'com.nulab-inc:zxcvbn:1.5.2'
+    implementation 'com.nulab-inc:zxcvbn:1.7.0'
 
-    // To convert voice message on old platforms
-    implementation 'com.arthenica:ffmpeg-kit-audio:4.5.LTS'
+    // To convert voice message on old platforms. Always keep the LTS suffix!
+    implementation 'com.arthenica:ffmpeg-kit-audio:4.5.1.LTS'
 
     // Alerter
     implementation 'com.github.tapadoo:alerter:7.2.4'
@@ -466,7 +463,7 @@ dependencies {
     // OSS License, gplay flavor only
     gplayImplementation 'com.google.android.gms:play-services-oss-licenses:17.0.0'
 
-    implementation "androidx.emoji2:emoji2:1.0.1"
+    implementation "androidx.emoji2:emoji2:1.1.0"
 
     // WebRTC
     // org.webrtc:google-webrtc is for development purposes only
