@@ -22,7 +22,7 @@ import im.vector.app.features.analytics.itf.VectorAnalyticsScreen
 // https://github.com/matrix-org/matrix-analytics-events/
 
 /**
- * Triggered when the user changed screen on Element Android/iOS
+ * Triggered when the user changed screen on Element Android/iOS.
  */
 data class MobileScreen(
         /**
@@ -44,6 +44,11 @@ data class MobileScreen(
         CreateRoom,
 
         /**
+         * The screen shown to create a new space.
+         */
+        CreateSpace,
+
+        /**
          * The confirmation screen shown before deactivating an account.
          */
         DeactivateAccount,
@@ -59,7 +64,7 @@ data class MobileScreen(
         Favourites,
 
         /**
-         * The form for the forgot password use case
+         * The form for the forgot password use case.
          */
         ForgotPassword,
 
@@ -79,6 +84,11 @@ data class MobileScreen(
         InviteFriends,
 
         /**
+         * Room accessed via space bottom sheet list.
+         */
+        Invites,
+
+        /**
          * The screen that displays the login flow (when the user already has an
          * account).
          */
@@ -96,7 +106,7 @@ data class MobileScreen(
 
         /**
          * The screen that displays the registration flow (when the user wants
-         * to create an account)
+         * to create an account).
          */
         Register,
 
@@ -143,7 +153,7 @@ data class MobileScreen(
         RoomPermissions,
 
         /**
-         * Screen that displays room preview if user hasn't joined yet
+         * Screen that displays room preview if user hasn't joined yet.
          */
         RoomPreview,
 
@@ -197,7 +207,7 @@ data class MobileScreen(
 
         /**
          * The advanced settings screen (developer mode, rageshake, push
-         * notification rules)
+         * notification rules).
          */
         SettingsAdvanced,
 
@@ -212,7 +222,7 @@ data class MobileScreen(
         SettingsGeneral,
 
         /**
-         * The Help and About screen
+         * The Help and About screen.
          */
         SettingsHelp,
 
@@ -222,12 +232,12 @@ data class MobileScreen(
         SettingsIgnoredUsers,
 
         /**
-         * The experimental features settings screen,
+         * The experimental features settings screen.
          */
         SettingsLabs,
 
         /**
-         * The settings screen with legals information
+         * The settings screen with legals information.
          */
         SettingsLegals,
 
@@ -262,17 +272,22 @@ data class MobileScreen(
         Sidebar,
 
         /**
-         * Screen that displays the list of rooms and spaces of a space
+         * Room accessed via space bottom sheet list.
+         */
+        SpaceBottomSheet,
+
+        /**
+         * Screen that displays the list of rooms and spaces of a space.
          */
         SpaceExploreRooms,
 
         /**
-         * Screen that displays the list of members of a space
+         * Screen that displays the list of members of a space.
          */
         SpaceMembers,
 
         /**
-         * The bottom sheet that list all space options
+         * The bottom sheet that list all space options.
          */
         SpaceMenu,
 
@@ -287,7 +302,7 @@ data class MobileScreen(
         SwitchDirectory,
 
         /**
-         * Screen that displays list of threads for a room
+         * Screen that displays list of threads for a room.
          */
         ThreadList,
 

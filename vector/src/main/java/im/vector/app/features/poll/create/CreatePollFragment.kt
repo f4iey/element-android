@@ -25,6 +25,7 @@ import androidx.core.view.isVisible
 import com.airbnb.mvrx.activityViewModel
 import com.airbnb.mvrx.args
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.extensions.configureWith
 import im.vector.app.core.platform.VectorBaseFragment
@@ -42,9 +43,12 @@ data class CreatePollArgs(
         val mode: PollMode
 ) : Parcelable
 
-class CreatePollFragment @Inject constructor(
-        private val controller: CreatePollController
-) : VectorBaseFragment<FragmentCreatePollBinding>(), CreatePollController.Callback {
+@AndroidEntryPoint
+class CreatePollFragment :
+        VectorBaseFragment<FragmentCreatePollBinding>(),
+        CreatePollController.Callback {
+
+    @Inject lateinit var controller: CreatePollController
 
     private val viewModel: CreatePollViewModel by activityViewModel()
     private val args: CreatePollArgs by args()
@@ -64,7 +68,7 @@ class CreatePollFragment @Inject constructor(
                 views.createPollToolbar.title = getString(R.string.create_poll_title)
                 views.createPollButton.text = getString(R.string.create_poll_title)
             }
-            PollMode.EDIT   -> {
+            PollMode.EDIT -> {
                 views.createPollToolbar.title = getString(R.string.edit_poll_title)
                 views.createPollButton.text = getString(R.string.edit_poll_title)
             }
@@ -85,8 +89,8 @@ class CreatePollFragment @Inject constructor(
 
         viewModel.observeViewEvents {
             when (it) {
-                CreatePollViewEvents.Success                  -> handleSuccess()
-                CreatePollViewEvents.EmptyQuestionError       -> handleEmptyQuestionError()
+                CreatePollViewEvents.Success -> handleSuccess()
+                CreatePollViewEvents.EmptyQuestionError -> handleEmptyQuestionError()
                 is CreatePollViewEvents.NotEnoughOptionsError -> handleNotEnoughOptionsError(it.requiredOptionsCount)
             }
         }

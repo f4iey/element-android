@@ -42,7 +42,8 @@ data class MessageInformationData(
         val e2eDecoration: E2EDecoration = E2EDecoration.NONE,
         val sendStateDecoration: SendStateDecoration = SendStateDecoration.NONE,
         val isFirstFromThisSender: Boolean = false,
-        val isLastFromThisSender: Boolean = false
+        val isLastFromThisSender: Boolean = false,
+        val messageType: String? = null
 ) : Parcelable {
 
     val matrixItem: MatrixItem
@@ -90,7 +91,10 @@ data class PollResponseData(
         val totalVotes: Int = 0,
         val winnerVoteCount: Int = 0,
         val isClosed: Boolean = false
-) : Parcelable
+) : Parcelable {
+
+    fun getVoteSummaryOfAnOption(optionId: String) = votes?.get(optionId)
+}
 
 @Parcelize
 data class PollVoteSummaryData(
@@ -102,7 +106,9 @@ enum class E2EDecoration {
     NONE,
     WARN_IN_CLEAR,
     WARN_SENT_BY_UNVERIFIED,
-    WARN_SENT_BY_UNKNOWN
+    WARN_SENT_BY_UNKNOWN,
+    WARN_SENT_BY_DELETED_SESSION,
+    WARN_UNSAFE_KEY
 }
 
 enum class SendStateDecoration {

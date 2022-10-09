@@ -16,7 +16,6 @@
 
 package im.vector.app.features.lifecycle
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.Application
@@ -34,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.matrix.android.sdk.api.extensions.tryOrNull
 import timber.log.Timber
 
 class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager: PopupAlertManager) : Application.ActivityLifecycleCallbacks {
@@ -59,6 +59,26 @@ class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager
     override fun onActivityStopped(activity: Activity) {}
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        if (activitiesInfo.isEmpty()) {
+            val context = activity.applicationContext
+            val packageManager: PackageManager = context.packageManager
+
+            // Get all activities from element android
+            activitiesInfo = packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES).activities
+
+            // Get all activities from PermissionController module
+            // See https://source.android.com/docs/core/architecture/modular-system/permissioncontroller#package-format
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
+                activitiesInfo += tryOrNull {
+                    packageManager.getPackageInfo("com.google.android.permissioncontroller", PackageManager.GET_ACTIVITIES).activities
+                } ?: tryOrNull {
+                    packageManager.getModuleInfo("com.google.android.permission", 1).packageName?.let {
+                        packageManager.getPackageInfo(it, PackageManager.GET_ACTIVITIES or PackageManager.MATCH_APEX).activities
+                    }
+                }.orEmpty()
+            }
+        }
+
         // restart the app if the task contains an unknown activity
         coroutineScope.launch {
             val isTaskCorrupted = try {
@@ -66,7 +86,7 @@ class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager
             } catch (failure: Throwable) {
                 when (failure) {
                     // The task was not found. We can ignore it.
-                    is IllegalArgumentException             -> {
+                    is IllegalArgumentException -> {
                         Timber.e("The task was not found: ${failure.localizedMessage}")
                         false
                     }
@@ -74,7 +94,7 @@ class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager
                         Timber.e("Package manager error: ${failure.localizedMessage}")
                         true
                     }
-                    else                                    -> throw failure
+                    else -> throw failure
                 }
             }
 
@@ -91,16 +111,8 @@ class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager
      *
      * @return true if an app task is corrupted by a potentially malicious activity
      */
-    @SuppressLint("NewApi")
-    @Suppress("DEPRECATION")
     private suspend fun isTaskCorrupted(activity: Activity): Boolean = withContext(Dispatchers.Default) {
         val context = activity.applicationContext
-        val packageManager: PackageManager = context.packageManager
-
-        // Get all activities from app manifest
-        if (activitiesInfo.isEmpty()) {
-            activitiesInfo = packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES).activities
-        }
 
         // Get all running activities on app task
         // and compare to activities declared in manifest
@@ -120,11 +132,12 @@ class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager
             // This was present in ActivityManager.RunningTaskInfo class since API level 1!
             // and it is inherited from TaskInfo since Android Q (API level 29).
             // API 29 changes : https://developer.android.com/sdk/api_diff/29/changes/android.app.ActivityManager.RunningTaskInfo
+            @Suppress("DEPRECATION")
             manager.getRunningTasks(10).any { runningTaskInfo ->
                 runningTaskInfo.topActivity?.let {
                     // Check whether the activity task affinity matches with app task affinity.
                     // The activity is considered safe when its task affinity doesn't correspond to app task affinity.
-                    if (packageManager.getActivityInfo(it, 0).taskAffinity == context.applicationInfo.taskAffinity) {
+                    if (context.packageManager.getActivityInfo(it, 0).taskAffinity == context.applicationInfo.taskAffinity) {
                         isPotentialMaliciousActivity(it)
                     } else false
                 } ?: false
@@ -136,7 +149,7 @@ class VectorActivityLifecycleCallbacks constructor(private val popupAlertManager
      * Detect potential malicious activity.
      * Check if the activity running in app task is declared in app manifest.
      *
-     * @param activity      the activity of the task
+     * @param activity the activity of the task
      * @return true if the activity is potentially malicious
      */
     private fun isPotentialMaliciousActivity(activity: ComponentName): Boolean = activitiesInfo.none { it.name == activity.className }

@@ -24,6 +24,7 @@ import androidx.core.view.isVisible
 import com.airbnb.mvrx.args
 import com.airbnb.mvrx.fragmentViewModel
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.extensions.cleanup
 import im.vector.app.core.extensions.configureWith
@@ -38,12 +39,13 @@ import org.matrix.android.sdk.api.session.room.powerlevels.Role
 import org.matrix.android.sdk.api.util.toMatrixItem
 import javax.inject.Inject
 
-class RoomPermissionsFragment @Inject constructor(
-        private val controller: RoomPermissionsController,
-        private val avatarRenderer: AvatarRenderer
-) :
+@AndroidEntryPoint
+class RoomPermissionsFragment :
         VectorBaseFragment<FragmentRoomSettingGenericBinding>(),
         RoomPermissionsController.Callback {
+
+    @Inject lateinit var controller: RoomPermissionsController
+    @Inject lateinit var avatarRenderer: AvatarRenderer
 
     private val viewModel: RoomPermissionsViewModel by fragmentViewModel()
 
@@ -71,7 +73,7 @@ class RoomPermissionsFragment @Inject constructor(
         viewModel.observeViewEvents {
             when (it) {
                 is RoomPermissionsViewEvents.Failure -> showFailure(it.throwable)
-                RoomPermissionsViewEvents.Success    -> showSuccess()
+                RoomPermissionsViewEvents.Success -> showSuccess()
             }
         }
     }

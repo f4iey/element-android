@@ -16,6 +16,7 @@
 
 package im.vector.app.features.home.room.detail.timeline.helper
 
+import im.vector.app.features.voicebroadcast.STATE_ROOM_VOICE_BROADCAST_INFO
 import org.matrix.android.sdk.api.session.events.model.EventType
 import org.matrix.android.sdk.api.session.room.timeline.TimelineEvent
 
@@ -24,7 +25,7 @@ object TimelineDisplayableEvents {
     /**
      * All types we have an item to build with. Every type not defined here will be shown as DefaultItem if forced to be shown, otherwise will be hidden.
      */
-    val DISPLAYABLE_TYPES = listOf(
+    val DISPLAYABLE_TYPES: List<String> = listOf(
             EventType.MESSAGE,
             EventType.STATE_ROOM_WIDGET_LEGACY,
             EventType.STATE_ROOM_WIDGET,
@@ -51,12 +52,11 @@ object TimelineDisplayableEvents {
             EventType.STATE_ROOM_JOIN_RULES,
             EventType.KEY_VERIFICATION_DONE,
             EventType.KEY_VERIFICATION_CANCEL,
-    ) + EventType.POLL_START + EventType.STATE_ROOM_BEACON_INFO
-}
-
-fun TimelineEvent.canBeMerged(): Boolean {
-    return root.getClearType() == EventType.STATE_ROOM_MEMBER ||
-            root.getClearType() == EventType.STATE_ROOM_SERVER_ACL
+            STATE_ROOM_VOICE_BROADCAST_INFO,
+    ) +
+            EventType.POLL_START +
+            EventType.STATE_ROOM_BEACON_INFO +
+            EventType.BEACON_LOCATION_DATA
 }
 
 fun TimelineEvent.isRoomConfiguration(roomCreatorUserId: String?): Boolean {
@@ -71,11 +71,11 @@ fun TimelineEvent.isRoomConfiguration(roomCreatorUserId: String?): Boolean {
         EventType.STATE_ROOM_CANONICAL_ALIAS,
         EventType.STATE_ROOM_POWER_LEVELS,
         EventType.STATE_ROOM_ENCRYPTION -> true
-        EventType.STATE_ROOM_MEMBER     -> {
+        EventType.STATE_ROOM_MEMBER -> {
             // Keep only room member events regarding the room creator (when he joined the room),
             // but exclude events where the room creator invite others, or where others join
             roomCreatorUserId != null && root.stateKey == roomCreatorUserId
         }
-        else                            -> false
+        else -> false
     }
 }

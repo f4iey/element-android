@@ -40,6 +40,7 @@ import im.vector.app.core.utils.PERMISSIONS_EMPTY
 import im.vector.app.core.utils.PERMISSIONS_FOR_FOREGROUND_LOCATION_SHARING
 import im.vector.app.core.utils.PERMISSIONS_FOR_PICKING_CONTACT
 import im.vector.app.core.utils.PERMISSIONS_FOR_TAKING_PHOTO
+import im.vector.app.core.utils.PERMISSIONS_FOR_VOICE_BROADCAST
 import im.vector.app.databinding.ViewAttachmentTypeSelectorBinding
 import im.vector.app.features.attachments.AttachmentTypeSelectorView.Callback
 import kotlin.math.max
@@ -51,9 +52,10 @@ private const val ANIMATION_DURATION = 250
  * It will return result through [Callback].
  */
 
-class AttachmentTypeSelectorView(context: Context,
-                                 inflater: LayoutInflater,
-                                 var callback: Callback?
+class AttachmentTypeSelectorView(
+        context: Context,
+        inflater: LayoutInflater,
+        var callback: Callback?
 ) : PopupWindow(context) {
 
     interface Callback {
@@ -74,6 +76,7 @@ class AttachmentTypeSelectorView(context: Context,
         views.attachmentContactButton.configure(Type.CONTACT)
         views.attachmentPollButton.configure(Type.POLL)
         views.attachmentLocationButton.configure(Type.LOCATION)
+        views.attachmentVoiceBroadcast.configure(Type.VOICE_BROADCAST)
         width = LinearLayout.LayoutParams.MATCH_PARENT
         height = LinearLayout.LayoutParams.WRAP_CONTENT
         animationStyle = 0
@@ -126,13 +129,14 @@ class AttachmentTypeSelectorView(context: Context,
 
     fun setAttachmentVisibility(type: Type, isVisible: Boolean) {
         when (type) {
-            Type.CAMERA   -> views.attachmentCameraButton
-            Type.GALLERY  -> views.attachmentGalleryButton
-            Type.FILE     -> views.attachmentFileButton
-            Type.STICKER  -> views.attachmentStickersButton
-            Type.CONTACT  -> views.attachmentContactButton
-            Type.POLL     -> views.attachmentPollButton
+            Type.CAMERA -> views.attachmentCameraButton
+            Type.GALLERY -> views.attachmentGalleryButton
+            Type.FILE -> views.attachmentFileButton
+            Type.STICKER -> views.attachmentStickersButton
+            Type.CONTACT -> views.attachmentContactButton
+            Type.POLL -> views.attachmentPollButton
             Type.LOCATION -> views.attachmentLocationButton
+            Type.VOICE_BROADCAST -> views.attachmentVoiceBroadcast
         }.let {
             it.isVisible = isVisible
         }
@@ -211,7 +215,7 @@ class AttachmentTypeSelectorView(context: Context,
     }
 
     /**
-     * The all possible types to pick with their required permissions and tooltip resource
+     * The all possible types to pick with their required permissions and tooltip resource.
      */
     enum class Type(val permissions: List<String>, @StringRes val tooltipRes: Int) {
         CAMERA(PERMISSIONS_FOR_TAKING_PHOTO, R.string.tooltip_attachment_photo),
@@ -220,6 +224,7 @@ class AttachmentTypeSelectorView(context: Context,
         STICKER(PERMISSIONS_EMPTY, R.string.tooltip_attachment_sticker),
         CONTACT(PERMISSIONS_FOR_PICKING_CONTACT, R.string.tooltip_attachment_contact),
         POLL(PERMISSIONS_EMPTY, R.string.tooltip_attachment_poll),
-        LOCATION(PERMISSIONS_FOR_FOREGROUND_LOCATION_SHARING, R.string.tooltip_attachment_location)
+        LOCATION(PERMISSIONS_FOR_FOREGROUND_LOCATION_SHARING, R.string.tooltip_attachment_location),
+        VOICE_BROADCAST(PERMISSIONS_FOR_VOICE_BROADCAST, R.string.tooltip_attachment_voice_broadcast),
     }
 }

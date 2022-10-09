@@ -12,6 +12,10 @@ buildscript {
         maven {
             url "https://plugins.gradle.org/m2/"
         }
+        // Do not use `mavenCentral()`, it prevents Dependabot from working properly
+        maven {
+            url 'https://repo1.maven.org/maven2'
+        }
     }
 
     dependencies {
@@ -20,20 +24,33 @@ buildscript {
         classpath libs.gradle.gradlePlugin
         classpath libs.gradle.kotlinPlugin
         classpath libs.gradle.hiltPlugin
-        classpath 'com.google.gms:google-services:4.3.10'
-        classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.3'
+        classpath 'com.google.firebase:firebase-appdistribution-gradle:3.0.3'
+        classpath 'com.google.gms:google-services:4.3.14'
+        classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.4.0.2513'
         classpath 'com.google.android.gms:oss-licenses-plugin:0.10.5'
-        classpath "com.likethesalad.android:stem-plugin:2.0.0"
-        classpath 'org.owasp:dependency-check-gradle:7.1.0.1'
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.6.21"
+        classpath "com.likethesalad.android:stem-plugin:2.2.2"
+        classpath 'org.owasp:dependency-check-gradle:7.2.1'
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.7.10"
+        classpath "org.jetbrains.kotlinx:kotlinx-knit:0.4.0"
+        classpath 'com.jakewharton:butterknife-gradle-plugin:10.2.3'
+        classpath 'app.cash.paparazzi:paparazzi-gradle-plugin:1.0.0'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
 }
 
-// ktlint Plugin
 plugins {
-    id "org.jlleitschuh.gradle.ktlint" version "10.3.0"
+    // ktlint Plugin
+    id "org.jlleitschuh.gradle.ktlint" version "11.0.0"
+    // Detekt
+    id "io.gitlab.arturbosch.detekt" version "1.21.0"
+    // Ksp
+    id "com.google.devtools.ksp" version "1.7.20-1.0.6"
+
+    // Dependency Analysis
+    id 'com.autonomousapps.dependency-analysis' version "1.13.1"
+    // Gradle doctor
+    id "com.osacky.doctor" version "0.8.1"
 }
 
 // https://github.com/jeremylong/DependencyCheck
@@ -46,8 +63,12 @@ dependencyCheck {
     ]
 }
 
+// Gradle doctor configuration
+apply from: './tools/gradle/doctor.gradle'
+
 allprojects {
     apply plugin: "org.jlleitschuh.gradle.ktlint"
+    apply plugin: "io.gitlab.arturbosch.detekt"
 
     repositories {
         // Do not use `mavenCentral()`, it prevents Dependabot from working properly
@@ -56,6 +77,14 @@ allprojects {
             content {
                 groups.mavenCentral.regex.each { includeGroupByRegex it }
                 groups.mavenCentral.group.each { includeGroup it }
+            }
+        }
+        // snapshots repository
+        maven {
+            url "https://oss.sonatype.org/content/repositories/snapshots"
+            content {
+                groups.snapshot.regex.each { includeGroupByRegex it }
+                groups.snapshot.group.each { includeGroup it }
             }
         }
         maven {
@@ -114,8 +143,13 @@ allprojects {
         enableExperimentalRules = true
         // display the corresponding rule
         verbose = true
+        reporters {
+            reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+            // To have XML report for Danger
+            reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
+        }
         disabledRules = [
-                // TODO: Re-enable these 4 rules after reformatting project
+                // TODO Re-enable these 4 rules after reformatting project
                 "indent",
                 "experimental:argument-list-wrapping",
                 "max-line-length",
@@ -134,7 +168,18 @@ allprojects {
                 "experimental:comment-wrapping",
                 // - A KDoc comment after any other element on the same line must be separated by a new line
                 "experimental:kdoc-wrapping",
+                // Ignore error "Redundant curly braces", since we use it to fix false positives, for instance in "elementLogs.${i}.txt"
+                "string-template",
         ]
+    }
+
+    detekt {
+        // preconfigure defaults
+        buildUponDefaultConfig = true
+        // activate all available (even unstable) rules.
+        allRules = true
+        // point to your custom config defining rules to run, overwriting default behavior
+        config = files("$rootDir/tools/detekt/detekt.yml")
     }
 }
 
@@ -148,7 +193,7 @@ def launchTask = getGradle()
         .toString()
         .toLowerCase()
 
-if (launchTask.contains("codeCoverageReport".toLowerCase())) {
+if (launchTask.contains("coverage".toLowerCase())) {
     apply from: 'coverage.gradle'
 }
 
@@ -160,8 +205,8 @@ apply plugin: 'org.sonarqube'
 
 sonarqube {
     properties {
-        property "sonar.projectName", "Element-Android"
-        property "sonar.projectKey", "im.vector.app.android"
+        property "sonar.projectName", "element-android"
+        property "sonar.projectKey", "vector-im_element-android"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.projectVersion", project(":vector").android.defaultConfig.versionName
         property "sonar.sourceEncoding", "UTF-8"
@@ -171,7 +216,7 @@ sonarqube {
         property "sonar.links.issue", "https://github.com/vector-im/element-android/issues"
         property "sonar.organization", "new_vector_ltd_organization"
         property "sonar.java.coveragePlugin", "jacoco"
-        property "sonar.coverage.jacoco.xmlReportPaths", "${project.buildDir}/reports/jacoco/allCodeCoverageReport/allCodeCoverageReport.xml"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${project.buildDir}/reports/jacoco/generateCoverageReport/generateCoverageReport.xml"
         property "sonar.login", project.hasProperty("SONAR_LOGIN") ? SONAR_LOGIN : "invalid"
     }
 }
@@ -187,7 +232,7 @@ project(":vector") {
     }
 }
 
-project(":library:diff-match-patch") {
+project(":library:external:diff-match-patch") {
     sonarqube {
         skipProject = true
     }
@@ -202,3 +247,113 @@ project(":library:diff-match-patch") {
 //        }
 //    }
 //}
+
+dependencyAnalysis {
+    dependencies {
+        bundle("kotlin-stdlib") {
+            includeGroup("org.jetbrains.kotlin")
+        }
+        bundle("react") {
+            includeGroup("com.facebook.react")
+        }
+    }
+    issues {
+        all {
+            ignoreKtx(true)
+            onUsedTransitiveDependencies {
+                // Transitively used dependencies that should be declared directly
+                severity("ignore")
+            }
+            onUnusedDependencies {
+                severity("fail")
+            }
+            onUnusedAnnotationProcessors {
+                severity("fail")
+                exclude("com.airbnb.android:epoxy-processor", "com.google.dagger:hilt-compiler") // False positives
+            }
+        }
+        project(":library:jsonviewer") {
+            onUnusedDependencies {
+                exclude("org.json:json") // Used in unit tests, overwrites the one bundled into Android
+            }
+        }
+        project(":library:ui-styles")
+        project(":matrix-sdk-android") {
+            onUnusedDependencies {
+                exclude("io.reactivex.rxjava2:rxkotlin") // Transitively required for mocking realm as monarchy doesn't expose Rx
+            }
+        }
+        project(":matrix-sdk-android-flow") {
+            onUnusedDependencies {
+                exclude("androidx.paging:paging-runtime-ktx") // False positive
+            }
+        }
+        project(":vector") {
+            onUnusedDependencies {
+                // False positives
+                exclude(
+                        "androidx.fragment:fragment-testing",
+                        "com.facebook.soloader:soloader",
+                        "com.vanniktech:emoji-google",
+                        "com.vanniktech:emoji-material",
+                        "org.maplibre.gl:android-plugin-annotation-v9",
+                        "org.maplibre.gl:android-sdk",
+                )
+            }
+        }
+    }
+}
+
+tasks.register("recordScreenshots", GradleBuild) {
+    startParameter.projectProperties.screenshot = ""
+    tasks = [':vector:recordPaparazziDebug']
+}
+
+tasks.register("verifyScreenshots", GradleBuild) {
+    startParameter.projectProperties.screenshot = ""
+    tasks = [':vector:verifyPaparazziDebug']
+}
+
+ext.initScreenshotTests = { project ->
+    def hasScreenshots = project.hasProperty("screenshot")
+    if (hasScreenshots) {
+        project.apply plugin: 'app.cash.paparazzi'
+    }
+    project.dependencies { testCompileOnly "app.cash.paparazzi:paparazzi:1.0.0" }
+    project.android.testOptions.unitTests.all {
+        def screenshotTestCapture = "**/*ScreenshotTest*"
+        if (hasScreenshots) {
+            include screenshotTestCapture
+        } else {
+            exclude screenshotTestCapture
+        }
+    }
+}
+
+// Workaround to have KSP generated Kotlin code available in the IDE (for code completion)
+// Ref: https://github.com/airbnb/epoxy/releases/tag/5.0.0beta02
+subprojects { project ->
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            android {
+                if (it instanceof com.android.build.gradle.LibraryExtension) {
+                    libraryVariants.all { variant ->
+                        def outputFolder = new File("build/generated/ksp/${variant.name}/kotlin")
+                        variant.addJavaSourceFoldersToModel(outputFolder)
+                        android.sourceSets.getAt(variant.name).java {
+                            srcDir(outputFolder)
+                        }
+                    }
+                } else if (it instanceof com.android.build.gradle.AppExtension) {
+                    applicationVariants.all { variant ->
+                        def outputFolder = new File("build/generated/ksp/${variant.name}/kotlin")
+                        variant.addJavaSourceFoldersToModel(outputFolder)
+                        android.sourceSets.getAt(variant.name).java {
+                            srcDir(outputFolder)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

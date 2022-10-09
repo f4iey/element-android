@@ -17,7 +17,7 @@
 package org.matrix.android.sdk.internal.crypto.encryption
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.amshove.kluent.shouldBe
 import org.junit.FixMethodOrder
 import org.junit.Test
@@ -34,20 +34,18 @@ import org.matrix.android.sdk.api.session.room.send.SendState
 import org.matrix.android.sdk.api.session.room.timeline.Timeline
 import org.matrix.android.sdk.api.session.room.timeline.TimelineEvent
 import org.matrix.android.sdk.api.session.room.timeline.TimelineSettings
-import org.matrix.android.sdk.common.CommonTestHelper
+import org.matrix.android.sdk.common.CommonTestHelper.Companion.runCryptoTest
 import org.matrix.android.sdk.common.CryptoTestHelper
-import java.util.concurrent.CountDownLatch
+import org.matrix.android.sdk.common.waitFor
+import kotlin.coroutines.resume
 
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class EncryptionTest : InstrumentedTest {
 
-    private val testHelper = CommonTestHelper(context())
-    private val cryptoTestHelper = CryptoTestHelper(testHelper)
-
     @Test
-    fun test_EncryptionEvent() {
-        performTest(roomShouldBeEncrypted = false) { room ->
+    fun test_EncryptionEvent() = runCryptoTest(context()) { cryptoTestHelper, _ ->
+        performTest(cryptoTestHelper, roomShouldBeEncrypted = false) { room ->
             // Send an encryption Event as an Event (and not as a state event)
             room.sendService().sendEvent(
                     eventType = EventType.STATE_ROOM_ENCRYPTION,
@@ -57,29 +55,38 @@ class EncryptionTest : InstrumentedTest {
     }
 
     @Test
-    fun test_EncryptionStateEvent() {
-        performTest(roomShouldBeEncrypted = true) { room ->
-            runBlocking {
-                // Send an encryption Event as a State Event
-                room.stateService().sendStateEvent(
-                        eventType = EventType.STATE_ROOM_ENCRYPTION,
-                        stateKey = "",
-                        body = EncryptionEventContent(algorithm = MXCRYPTO_ALGORITHM_MEGOLM).toContent()
-                )
-            }
+    fun test_EncryptionStateEvent() = runCryptoTest(context()) { cryptoTestHelper, _ ->
+        performTest(cryptoTestHelper, roomShouldBeEncrypted = true) { room ->
+            // Send an encryption Event as a State Event
+            room.stateService().sendStateEvent(
+                    eventType = EventType.STATE_ROOM_ENCRYPTION,
+                    stateKey = "",
+                    body = EncryptionEventContent(algorithm = MXCRYPTO_ALGORITHM_MEGOLM).toContent()
+            )
         }
     }
 
-    private fun performTest(roomShouldBeEncrypted: Boolean, action: (Room) -> Unit) {
+    private suspend fun performTest(cryptoTestHelper: CryptoTestHelper, roomShouldBeEncrypted: Boolean, action: suspend (Room) -> Unit) {
         val cryptoTestData = cryptoTestHelper.doE2ETestWithAliceInARoom(encryptedRoom = false)
-
         val aliceSession = cryptoTestData.firstSession
         val room = aliceSession.getRoom(cryptoTestData.roomId)!!
 
         room.roomCryptoService().isEncrypted() shouldBe false
 
         val timeline = room.timelineService().createTimeline(null, TimelineSettings(10))
-        val latch = CountDownLatch(1)
+        timeline.start()
+        waitFor(
+                continueWhen = { timeline.waitForEncryptedMessages() },
+                action = { action.invoke(room) }
+        )
+        timeline.dispose()
+
+        room.roomCryptoService().isEncrypted() shouldBe roomShouldBeEncrypted
+    }
+}
+
+private suspend fun Timeline.waitForEncryptedMessages() {
+    suspendCancellableCoroutine<Unit> { continuation ->
         val timelineListener = object : Timeline.Listener {
             override fun onTimelineFailure(throwable: Throwable) {
             }
@@ -94,21 +101,12 @@ class EncryptionTest : InstrumentedTest {
                         .filter { it.root.getClearType() == EventType.STATE_ROOM_ENCRYPTION }
 
                 if (newMessages.isNotEmpty()) {
-                    timeline.removeListener(this)
-                    latch.countDown()
+                    removeListener(this)
+                    continuation.resume(Unit)
                 }
             }
         }
-        timeline.start()
-        timeline.addListener(timelineListener)
-
-        action.invoke(room)
-        testHelper.await(latch)
-        timeline.dispose()
-        testHelper.waitWithLatch {
-            room.roomCryptoService().isEncrypted() shouldBe roomShouldBeEncrypted
-            it.countDown()
-        }
-        cryptoTestData.cleanUp(testHelper)
+        addListener(timelineListener)
+        continuation.invokeOnCancellation { removeListener(timelineListener) }
     }
 }

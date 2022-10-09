@@ -32,6 +32,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.airbnb.mvrx.activityViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.utils.AssetReader
 import im.vector.app.databinding.FragmentLoginWebBinding
@@ -45,11 +46,13 @@ import javax.inject.Inject
 
 /**
  * This screen is displayed when the application does not support login flow or registration flow
- * of the homeserver, as a fallback to login or to create an account
+ * of the homeserver, as a fallback to login or to create an account.
  */
-class LoginWebFragment @Inject constructor(
-        private val assetReader: AssetReader
-) : AbstractLoginFragment<FragmentLoginWebBinding>() {
+@AndroidEntryPoint
+class LoginWebFragment :
+        AbstractLoginFragment<FragmentLoginWebBinding>() {
+
+    @Inject lateinit var assetReader: AssetReader
 
     private val softLogoutViewModel: SoftLogoutViewModel by activityViewModel()
 
@@ -81,7 +84,7 @@ class LoginWebFragment @Inject constructor(
     private fun setupTitle(state: LoginViewState) {
         toolbar?.title = when (state.signMode) {
             SignMode.SignIn -> getString(R.string.login_signin)
-            else            -> getString(R.string.login_signup)
+            else -> getString(R.string.login_signup)
         }
     }
 
@@ -123,8 +126,10 @@ class LoginWebFragment @Inject constructor(
         views.loginWebWebView.loadUrl(url)
 
         views.loginWebWebView.webViewClient = object : WebViewClient() {
-            override fun onReceivedSslError(view: WebView, handler: SslErrorHandler,
-                                            error: SslError) {
+            override fun onReceivedSslError(
+                    view: WebView, handler: SslErrorHandler,
+                    error: SslError
+            ) {
                 MaterialAlertDialogBuilder(requireActivity())
                         .setMessage(R.string.ssl_could_not_verify)
                         .setPositiveButton(R.string.ssl_trust) { _, _ -> handler.proceed() }
@@ -141,6 +146,7 @@ class LoginWebFragment @Inject constructor(
                         .show()
             }
 
+            @Deprecated("Deprecated in Java")
             override fun onReceivedError(view: WebView, errorCode: Int, description: String, failingUrl: String) {
                 super.onReceivedError(view, errorCode, description, failingUrl)
 
@@ -188,11 +194,12 @@ class LoginWebFragment @Inject constructor(
              *             }
              *         }
              *    }
-             * </pre>
+             * </pre>.
              * @param view
              * @param url
              * @return
              */
+            @Deprecated("Deprecated in Java")
             override fun shouldOverrideUrlLoading(view: WebView, url: String?): Boolean {
                 if (url == null) return super.shouldOverrideUrlLoading(view, url as String?)
 
@@ -247,9 +254,9 @@ class LoginWebFragment @Inject constructor(
 
     override fun onBackPressed(toolbarButton: Boolean): Boolean {
         return when {
-            toolbarButton                     -> super.onBackPressed(toolbarButton)
+            toolbarButton -> super.onBackPressed(toolbarButton)
             views.loginWebWebView.canGoBack() -> views.loginWebWebView.goBack().run { true }
-            else                              -> super.onBackPressed(toolbarButton)
+            else -> super.onBackPressed(toolbarButton)
         }
     }
 }

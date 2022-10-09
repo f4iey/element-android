@@ -24,7 +24,7 @@ import org.matrix.android.sdk.api.session.crypto.model.CryptoDeviceInfo
 import org.matrix.android.sdk.api.session.crypto.model.DeviceInfo
 
 /**
- * Transient events for Ignored users screen
+ * Transient events for Ignored users screen.
  */
 sealed class DevicesViewEvents : VectorViewEvents {
     data class Loading(val message: CharSequence? = null) : DevicesViewEvents()
@@ -48,4 +48,6 @@ sealed class DevicesViewEvents : VectorViewEvents {
     ) : DevicesViewEvents()
 
     data class ShowManuallyVerify(val cryptoDeviceInfo: CryptoDeviceInfo) : DevicesViewEvents()
+
+    object PromptResetSecrets : DevicesViewEvents()
 }

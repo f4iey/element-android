@@ -26,7 +26,7 @@ import org.matrix.android.sdk.api.util.JsonDict
 @JsonClass(generateAdapter = true)
 data class OlmDecryptionResult(
         /**
-         * The decrypted payload (with properties 'type', 'content')
+         * The decrypted payload (with properties 'type', 'content').
          */
         @Json(name = "payload") val payload: JsonDict? = null,
 
@@ -44,5 +44,10 @@ data class OlmDecryptionResult(
         /**
          * Devices which forwarded this session to us (normally empty).
          */
-        @Json(name = "forwardingCurve25519KeyChain") val forwardingCurve25519KeyChain: List<String>? = null
+        @Json(name = "forwardingCurve25519KeyChain") val forwardingCurve25519KeyChain: List<String>? = null,
+
+        /**
+         * True if the key used to decrypt is considered safe (trusted).
+         */
+        @Json(name = "key_safety") val isSafe: Boolean? = null,
 )

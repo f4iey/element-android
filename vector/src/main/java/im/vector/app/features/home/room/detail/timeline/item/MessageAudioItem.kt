@@ -37,7 +37,7 @@ import im.vector.app.features.home.room.detail.timeline.helper.ContentUploadStat
 import im.vector.app.features.home.room.detail.timeline.style.TimelineMessageLayout
 import im.vector.app.features.themes.ThemeUtils
 
-@EpoxyModelClass(layout = R.layout.item_timeline_event_base)
+@EpoxyModelClass
 abstract class MessageAudioItem : AbsMessageItem<MessageAudioItem.Holder>() {
 
     @EpoxyAttribute
@@ -53,8 +53,7 @@ abstract class MessageAudioItem : AbsMessageItem<MessageAudioItem.Holder>() {
     var fileSize: Long = 0
 
     @EpoxyAttribute
-    @JvmField
-    var isLocalFile = false
+    var izLocalFile = false
 
     @EpoxyAttribute(EpoxyAttribute.Option.DoNotHash)
     var onSeek: ((percentage: Float) -> Unit)? = null
@@ -91,7 +90,7 @@ abstract class MessageAudioItem : AbsMessageItem<MessageAudioItem.Holder>() {
                     holder.view.context.getString(R.string.error_audio_message_unable_to_play, filename)
             holder.progressLayout.isVisible = false
         } else {
-            contentUploadStateTrackerBinder.bind(attributes.informationData.eventId, isLocalFile, holder.progressLayout)
+            contentUploadStateTrackerBinder.bind(attributes.informationData.eventId, izLocalFile, holder.progressLayout)
         }
     }
 
@@ -144,9 +143,9 @@ abstract class MessageAudioItem : AbsMessageItem<MessageAudioItem.Holder>() {
         audioMessagePlaybackTracker.track(attributes.informationData.eventId, object : AudioMessagePlaybackTracker.Listener {
             override fun onUpdate(state: AudioMessagePlaybackTracker.Listener.State) {
                 when (state) {
-                    is AudioMessagePlaybackTracker.Listener.State.Idle      -> renderIdleState(holder)
-                    is AudioMessagePlaybackTracker.Listener.State.Playing   -> renderPlayingState(holder, state)
-                    is AudioMessagePlaybackTracker.Listener.State.Paused    -> renderPausedState(holder, state)
+                    is AudioMessagePlaybackTracker.Listener.State.Idle -> renderIdleState(holder)
+                    is AudioMessagePlaybackTracker.Listener.State.Playing -> renderPlayingState(holder, state)
+                    is AudioMessagePlaybackTracker.Listener.State.Paused -> renderPausedState(holder, state)
                     is AudioMessagePlaybackTracker.Listener.State.Recording -> Unit
                 }
             }
@@ -210,6 +209,6 @@ abstract class MessageAudioItem : AbsMessageItem<MessageAudioItem.Holder>() {
     }
 
     companion object {
-        private const val STUB_ID = R.id.messageContentAudioStub
+        private val STUB_ID = R.id.messageContentAudioStub
     }
 }

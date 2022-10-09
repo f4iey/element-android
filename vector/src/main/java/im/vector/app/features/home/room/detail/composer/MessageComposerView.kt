@@ -39,12 +39,14 @@ import im.vector.app.databinding.ComposerLayoutBinding
 class MessageComposerView @JvmOverloads constructor(
         context: Context,
         attrs: AttributeSet? = null,
-        defStyleAttr: Int = 0) : ConstraintLayout(context, attrs, defStyleAttr) {
+        defStyleAttr: Int = 0
+) : ConstraintLayout(context, attrs, defStyleAttr) {
 
     interface Callback : ComposerEditText.Callback {
         fun onCloseRelatedMessage()
         fun onSendMessage(text: CharSequence)
         fun onAddAttachment()
+        fun onExpandOrCompactChange()
     }
 
     val views: ComposerLayoutBinding
@@ -95,6 +97,7 @@ class MessageComposerView @JvmOverloads constructor(
         }
         currentConstraintSetId = R.layout.composer_layout_constraint_set_compact
         applyNewConstraintSet(animate, transitionComplete)
+        callback?.onExpandOrCompactChange()
     }
 
     fun expand(animate: Boolean = true, transitionComplete: (() -> Unit)? = null) {
@@ -104,6 +107,7 @@ class MessageComposerView @JvmOverloads constructor(
         }
         currentConstraintSetId = R.layout.composer_layout_constraint_set_expanded
         applyNewConstraintSet(animate, transitionComplete)
+        callback?.onExpandOrCompactChange()
     }
 
     fun setTextIfDifferent(text: CharSequence?): Boolean {
@@ -144,13 +148,5 @@ class MessageComposerView @JvmOverloads constructor(
             })
         }
         TransitionManager.beginDelayedTransition((parent as? ViewGroup ?: this), transition)
-    }
-
-    fun setRoomEncrypted(isEncrypted: Boolean) {
-        if (isEncrypted) {
-            views.composerEditText.setHint(R.string.room_message_placeholder)
-        } else {
-            views.composerEditText.setHint(R.string.room_message_placeholder)
-        }
     }
 }

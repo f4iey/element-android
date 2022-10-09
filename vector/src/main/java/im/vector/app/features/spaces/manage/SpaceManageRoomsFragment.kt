@@ -32,6 +32,7 @@ import com.airbnb.mvrx.Loading
 import com.airbnb.mvrx.activityViewModel
 import com.airbnb.mvrx.fragmentViewModel
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.extensions.cleanup
 import im.vector.app.core.extensions.configureWith
@@ -46,12 +47,14 @@ import org.matrix.android.sdk.api.session.room.model.SpaceChildInfo
 import reactivecircus.flowbinding.appcompat.queryTextChanges
 import javax.inject.Inject
 
-class SpaceManageRoomsFragment @Inject constructor(
-        private val epoxyController: SpaceManageRoomsController
-) : VectorBaseFragment<FragmentSpaceAddRoomsBinding>(),
+@AndroidEntryPoint
+class SpaceManageRoomsFragment :
+        VectorBaseFragment<FragmentSpaceAddRoomsBinding>(),
         OnBackPressed,
         SpaceManageRoomsController.Listener,
         Callback {
+
+    @Inject lateinit var epoxyController: SpaceManageRoomsController
 
     private val viewModel by fragmentViewModel(SpaceManageRoomsViewModel::class)
     private val sharedViewModel: SpaceManageSharedViewModel by activityViewModel()
@@ -88,7 +91,7 @@ class SpaceManageRoomsFragment @Inject constructor(
                 is Loading -> {
                     sharedViewModel.handle(SpaceManagedSharedAction.ShowLoading)
                 }
-                else       -> {
+                else -> {
                     sharedViewModel.handle(SpaceManagedSharedAction.HideLoading)
                 }
             }
@@ -171,16 +174,16 @@ class SpaceManageRoomsFragment @Inject constructor(
 
     override fun onActionItemClicked(mode: ActionMode?, item: MenuItem?): Boolean {
         when (item?.itemId) {
-            R.id.action_delete                -> {
+            R.id.action_delete -> {
                 handleDeleteSelection()
             }
-            R.id.action_mark_as_suggested     -> {
+            R.id.action_mark_as_suggested -> {
                 viewModel.handle(SpaceManageRoomViewAction.MarkAllAsSuggested(true))
             }
             R.id.action_mark_as_not_suggested -> {
                 viewModel.handle(SpaceManageRoomViewAction.MarkAllAsSuggested(false))
             }
-            else                              -> {
+            else -> {
             }
         }
         mode?.finish()

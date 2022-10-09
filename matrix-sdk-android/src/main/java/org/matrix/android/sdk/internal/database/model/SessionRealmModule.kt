@@ -22,7 +22,7 @@ import org.matrix.android.sdk.internal.database.model.presence.UserPresenceEntit
 import org.matrix.android.sdk.internal.database.model.threads.ThreadSummaryEntity
 
 /**
- * Realm module for Session
+ * Realm module for Session.
  */
 @RealmModule(
         library = true,
@@ -32,11 +32,10 @@ import org.matrix.android.sdk.internal.database.model.threads.ThreadSummaryEntit
             EventInsertEntity::class,
             TimelineEventEntity::class,
             FilterEntity::class,
-            GroupEntity::class,
-            GroupSummaryEntity::class,
             ReadReceiptEntity::class,
             RoomEntity::class,
             RoomSummaryEntity::class,
+            LocalRoomSummaryEntity::class,
             RoomTagEntity::class,
             SyncEntity::class,
             PendingThreePidEntity::class,

@@ -63,20 +63,20 @@ class SpaceManageRoomsViewModel @AssistedInject constructor(
 
     override fun handle(action: SpaceManageRoomViewAction) {
         when (action) {
-            is SpaceManageRoomViewAction.ToggleSelection          -> handleToggleSelection(action)
-            is SpaceManageRoomViewAction.UpdateFilter             -> {
+            is SpaceManageRoomViewAction.ToggleSelection -> handleToggleSelection(action)
+            is SpaceManageRoomViewAction.UpdateFilter -> {
                 setState { copy(currentFilter = action.filter) }
             }
-            SpaceManageRoomViewAction.ClearSelection              -> {
+            SpaceManageRoomViewAction.ClearSelection -> {
                 setState { copy(selectedRooms = emptyList()) }
             }
-            SpaceManageRoomViewAction.BulkRemove                  -> {
+            SpaceManageRoomViewAction.BulkRemove -> {
                 handleBulkRemove()
             }
-            is SpaceManageRoomViewAction.MarkAllAsSuggested       -> {
+            is SpaceManageRoomViewAction.MarkAllAsSuggested -> {
                 handleBulkMarkAsSuggested(action.suggested)
             }
-            SpaceManageRoomViewAction.RefreshFromServer           -> {
+            SpaceManageRoomViewAction.RefreshFromServer -> {
                 refreshSummaryAPI()
             }
             SpaceManageRoomViewAction.LoadAdditionalItemsIfNeeded -> {
@@ -189,7 +189,7 @@ class SpaceManageRoomsViewModel @AssistedInject constructor(
                 val apiResult = session.spaceService().querySpaceChildren(
                         spaceId = initialState.spaceId,
                         from = nextToken,
-                        knownStateList = knownResults.childrenState.orEmpty(),
+                        knownStateList = knownResults.childrenState,
                         limit = paginationLimit
                 )
                 val newKnown = apiResult.children.mapNotNull { session.getRoomSummary(it.childRoomId) }

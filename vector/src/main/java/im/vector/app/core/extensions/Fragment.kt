@@ -36,9 +36,10 @@ fun Fragment.registerStartForActivityResult(onResult: (ActivityResult) -> Unit):
 fun Fragment.addFragment(
         frameId: Int,
         fragment: Fragment,
+        tag: String? = null,
         allowStateLoss: Boolean = false
 ) {
-    parentFragmentManager.commitTransaction(allowStateLoss) { add(frameId, fragment) }
+    parentFragmentManager.commitTransaction(allowStateLoss) { add(frameId, fragment, tag) }
 }
 
 fun <T : Fragment> Fragment.addFragment(
@@ -158,7 +159,7 @@ fun <T : Fragment> Fragment.addChildFragmentToBackstack(
 }
 
 /**
- * Return a list of all child Fragments, recursively
+ * Return a list of all child Fragments, recursively.
  */
 fun Fragment.getAllChildFragments(): List<Fragment> {
     return listOf(this) + childFragmentManager.fragments.map { it.getAllChildFragments() }.flatten()
@@ -174,7 +175,7 @@ fun Fragment.queryExportKeys(userId: String, activityResultLauncher: ActivityRes
     selectTxtFileToWrite(
             activity = requireActivity(),
             activityResultLauncher = activityResultLauncher,
-            defaultFileName = "$appName-megolm-export-$userId-$timestamp.txt",
+            defaultFileName = "$appName-megolm-export-$userId-${timestamp}.txt",
             chooserHint = getString(R.string.keys_backup_setup_step1_manual_export)
     )
 }
@@ -186,7 +187,7 @@ fun Activity.queryExportKeys(userId: String, activityResultLauncher: ActivityRes
     selectTxtFileToWrite(
             activity = this,
             activityResultLauncher = activityResultLauncher,
-            defaultFileName = "$appName-megolm-export-$userId-$timestamp.txt",
+            defaultFileName = "$appName-megolm-export-$userId-${timestamp}.txt",
             chooserHint = getString(R.string.keys_backup_setup_step1_manual_export)
     )
 }

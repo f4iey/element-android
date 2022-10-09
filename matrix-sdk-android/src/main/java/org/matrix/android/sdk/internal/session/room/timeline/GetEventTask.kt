@@ -56,12 +56,13 @@ internal class DefaultGetEventTask @Inject constructor(
                                 payload = result.clearEvent,
                                 senderKey = result.senderCurve25519Key,
                                 keysClaimed = result.claimedEd25519Key?.let { mapOf("ed25519" to it) },
-                                forwardingCurve25519KeyChain = result.forwardingCurve25519KeyChain
+                                forwardingCurve25519KeyChain = result.forwardingCurve25519KeyChain,
+                                isSafe = result.isSafe
                         )
                     }
         }
 
-        event.ageLocalTs = event.unsignedData?.age?.let { clock.epochMillis() - it }
+        event.ageLocalTs = clock.epochMillis() - (event.unsignedData?.age ?: 0)
 
         return event
     }

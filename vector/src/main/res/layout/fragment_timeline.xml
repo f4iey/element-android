@@ -37,13 +37,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/timelineRecyclerViewBarrier"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:barrierDirection="top"
-        app:constraint_referenced_ids="composerLayout,notificationAreaView,failedMessagesWarningStub" />
-
     <im.vector.app.features.sync.widget.SyncStateView
         android:id="@+id/syncStateView"
         android:layout_width="0dp"
@@ -52,8 +45,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/appBarLayout" />
 
-    <im.vector.app.features.location.live.LocationLiveStatusView
-        android:id="@+id/locationLiveStatusIndicator"
+    <im.vector.app.features.location.live.LiveLocationStatusView
+        android:id="@+id/liveLocationStatusIndicator"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:visibility="gone"
@@ -68,17 +61,16 @@
         android:layout_height="wrap_content"
         android:background="?android:colorBackground"
         android:minHeight="54dp"
-        android:visibility="visible"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/locationLiveStatusIndicator" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/liveLocationStatusIndicator" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/timelineRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:overScrollMode="always"
-        app:layout_constraintBottom_toTopOf="@id/timelineRecyclerViewBarrier"
+        app:layout_constraintBottom_toTopOf="@id/typingMessageView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/removeJitsiWidgetView"
@@ -103,14 +95,13 @@
     <im.vector.app.core.ui.views.TypingMessageView
         android:id="@+id/typingMessageView"
         android:layout_width="0dp"
-        android:layout_height="20dp"
+        android:layout_height="wrap_content"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
-        app:layout_constraintBottom_toTopOf="@id/composerLayout"
+        app:layout_constraintBottom_toTopOf="@id/bottomBarrier"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/timelineRecyclerView"
-        tools:visibility="visible" />
+        app:layout_constraintTop_toBottomOf="@id/timelineRecyclerView" />
 
     <im.vector.app.core.ui.views.NotificationAreaView
         android:id="@+id/notificationAreaView"
@@ -128,31 +119,26 @@
         android:layout_height="wrap_content"
         android:inflatedId="@+id/failedMessagesWarningStub"
         android:layout="@layout/view_stub_failed_message_warning_layout"
-        app:layout_constraintBottom_toTopOf="@id/composerLayout"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <im.vector.app.features.home.room.detail.composer.MessageComposerView
-        android:id="@+id/composerLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?android:colorBackground"
-        android:minHeight="56dp"
-        android:transitionName="composer"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <im.vector.app.features.home.room.detail.composer.voice.VoiceMessageRecorderView
-        android:id="@+id/voiceMessageRecorderView"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/composerContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
+        tools:layout_height="300dp" />
+
+    <FrameLayout
+        android:id="@+id/composerContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/voiceMessageRecorderContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <ViewStub
         android:id="@+id/inviteViewStub"
@@ -166,11 +152,11 @@
         app:layout_constraintTop_toBottomOf="@id/appBarLayout" />
 
     <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/badgeBarrier"
+        android:id="@+id/bottomBarrier"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:barrierDirection="top"
-        app:constraint_referenced_ids="composerLayout,notificationAreaView, failedMessagesWarningStub" />
+        app:constraint_referenced_ids="composerContainer,notificationAreaView,failedMessagesWarningStub" />
 
     <im.vector.app.core.platform.BadgeFloatingActionButton
         android:id="@+id/jumpToBottomView"
@@ -184,7 +170,7 @@
         app:badgeTextColor="?colorOnPrimary"
         app:badgeTextPadding="2dp"
         app:badgeTextSize="10sp"
-        app:layout_constraintBottom_toTopOf="@id/badgeBarrier"
+        app:layout_constraintBottom_toTopOf="@id/bottomBarrier"
         app:layout_constraintEnd_toEndOf="parent"
         app:tint="@android:color/black" />
 
@@ -200,5 +186,48 @@
         android:layout_height="match_parent"
         android:background="?vctr_chat_effect_snow_background"
         android:visibility="invisible" />
+
+    <!-- Room not found layout -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/roomNotFound"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="?android:colorBackground"
+        android:elevation="10dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="gone">
+
+        <ImageView
+            android:id="@+id/roomNotFoundIcon"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_alert_triangle"
+            app:layout_constraintBottom_toTopOf="@id/roomNotFoundText"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <TextView
+            android:id="@+id/roomNotFoundText"
+            style="@style/Widget.Vector.TextView.Subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/layout_vertical_margin"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:text="@string/timeline_error_room_not_found"
+            android:textColor="?vctr_content_primary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/roomNotFoundIcon" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

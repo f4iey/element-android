@@ -59,13 +59,13 @@ class ThreadsActivity : VectorBaseActivity<ActivityThreadsBinding>() {
     private fun initFragment() {
         if (isFirstCreation()) {
             when (val fragment = fragmentToNavigate()) {
-                is DisplayFragment.ThreadList     -> {
+                is DisplayFragment.ThreadList -> {
                     initThreadListFragment(fragment.threadListArgs)
                 }
                 is DisplayFragment.ThreadTimeLine -> {
                     initThreadTimelineFragment(fragment.threadTimelineArgs)
                 }
-                is DisplayFragment.ErrorFragment  -> {
+                is DisplayFragment.ErrorFragment -> {
                     finish()
                 }
             }
@@ -117,7 +117,7 @@ class ThreadsActivity : VectorBaseActivity<ActivityThreadsBinding>() {
     }
 
     /**
-     * Determine in witch fragment we should navigate
+     * Determine in witch fragment we should navigate.
      */
     private fun fragmentToNavigate(): DisplayFragment {
         getThreadTimelineArgs()?.let {

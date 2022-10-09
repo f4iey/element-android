@@ -16,6 +16,7 @@
 
 package org.matrix.android.sdk.internal.database.model.livelocation
 
+import io.realm.RealmList
 import io.realm.RealmObject
 import io.realm.annotations.PrimaryKey
 
@@ -29,14 +30,26 @@ internal open class LiveLocationShareAggregatedSummaryEntity(
         @PrimaryKey
         var eventId: String = "",
 
+        /**
+         * List of event ids used to compute the aggregated summary data.
+         */
+        var relatedEventIds: RealmList<String> = RealmList(),
+
         var roomId: String = "",
 
+        var userId: String = "",
+
+        /**
+         * Indicate whether the live is currently running.
+         */
         var isActive: Boolean? = null,
+
+        var startOfLiveTimestampMillis: Long? = null,
 
         var endOfLiveTimestampMillis: Long? = null,
 
         /**
-         * For now we persist this as a JSON for greater flexibility
+         * For now we persist this as a JSON for greater flexibility.
          * @see [org.matrix.android.sdk.api.session.room.model.message.MessageBeaconLocationDataContent]
          */
         var lastLocationContent: String? = null,

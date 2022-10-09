@@ -16,10 +16,10 @@
 
 package im.vector.app.features.rageshake
 
-import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import androidx.core.content.edit
-import im.vector.app.core.di.DefaultSharedPreferences
+import im.vector.app.core.di.DefaultPreferences
 import im.vector.app.core.resources.VersionCodeProvider
 import im.vector.app.features.version.VersionProvider
 import org.matrix.android.sdk.api.Matrix
@@ -31,10 +31,11 @@ import javax.inject.Singleton
 
 @Singleton
 class VectorUncaughtExceptionHandler @Inject constructor(
-        context: Context,
+        @DefaultPreferences
+        private val preferences: SharedPreferences,
         private val bugReporter: BugReporter,
         private val versionProvider: VersionProvider,
-        private val versionCodeProvider: VersionCodeProvider
+        private val versionCodeProvider: VersionCodeProvider,
 ) : Thread.UncaughtExceptionHandler {
 
     // key to save the crash status
@@ -44,10 +45,8 @@ class VectorUncaughtExceptionHandler @Inject constructor(
 
     private var previousHandler: Thread.UncaughtExceptionHandler? = null
 
-    private val preferences = DefaultSharedPreferences.getInstance(context)
-
     /**
-     * Activate this handler
+     * Activate this handler.
      */
     fun activate() {
         previousHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -55,12 +54,13 @@ class VectorUncaughtExceptionHandler @Inject constructor(
     }
 
     /**
-     * An uncaught exception has been triggered
+     * An uncaught exception has been triggered.
      *
-     * @param thread    the thread
+     * @param thread the thread
      * @param throwable the throwable
      * @return the exception description
      */
+    @Suppress("PrintStackTrace")
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         Timber.v("Uncaught exception: $throwable")
         preferences.edit(commit = true) {
@@ -112,7 +112,7 @@ class VectorUncaughtExceptionHandler @Inject constructor(
     }
 
     /**
-     * Tells if the application crashed
+     * Tells if the application crashed.
      *
      * @return true if the application crashed
      */
@@ -121,7 +121,7 @@ class VectorUncaughtExceptionHandler @Inject constructor(
     }
 
     /**
-     * Clear the crash status
+     * Clear the crash status.
      */
     fun clearAppCrashStatus() {
         preferences.edit {

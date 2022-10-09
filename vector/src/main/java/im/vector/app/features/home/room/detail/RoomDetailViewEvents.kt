@@ -26,7 +26,7 @@ import org.matrix.android.sdk.api.util.MatrixItem
 import java.io.File
 
 /**
- * Transient events for RoomDetail
+ * Transient events for RoomDetail.
  */
 sealed class RoomDetailViewEvents : VectorViewEvents {
     data class Failure(val throwable: Throwable, val showInDialog: Boolean = false) : RoomDetailViewEvents()
@@ -51,7 +51,7 @@ sealed class RoomDetailViewEvents : VectorViewEvents {
     object OpenRoomProfile : RoomDetailViewEvents()
     data class ShowRoomAvatarFullScreen(val matrixItem: MatrixItem?, val view: View?) : RoomDetailViewEvents()
 
-    object ShowWaitingView : RoomDetailViewEvents()
+    data class ShowWaitingView(val text: String? = null) : RoomDetailViewEvents()
     object HideWaitingView : RoomDetailViewEvents()
 
     data class DownloadFileState(
@@ -75,13 +75,14 @@ sealed class RoomDetailViewEvents : VectorViewEvents {
 
     object OpenIntegrationManager : RoomDetailViewEvents()
     object OpenActiveWidgetBottomSheet : RoomDetailViewEvents()
-    data class RequestNativeWidgetPermission(val widget: Widget,
-                                             val domain: String,
-                                             val grantedEvents: RoomDetailViewEvents) : RoomDetailViewEvents()
+    data class RequestNativeWidgetPermission(
+            val widget: Widget,
+            val domain: String,
+            val grantedEvents: RoomDetailViewEvents
+    ) : RoomDetailViewEvents()
 
     data class StartChatEffect(val type: ChatEffect) : RoomDetailViewEvents()
     object StopChatEffects : RoomDetailViewEvents()
     object RoomReplacementStarted : RoomDetailViewEvents()
-
-    data class ChangeLocationIndicator(val isVisible: Boolean) : RoomDetailViewEvents()
+    object OpenElementCallWidget : RoomDetailViewEvents()
 }

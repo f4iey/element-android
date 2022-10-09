@@ -36,10 +36,11 @@ import org.matrix.android.sdk.api.session.room.model.PowerLevelsContent
 import org.matrix.android.sdk.api.session.room.model.RoomMemberSummary
 import org.matrix.android.sdk.api.util.MatrixItem
 
-class AutocompleteMemberPresenter @AssistedInject constructor(context: Context,
-                                                              @Assisted val roomId: String,
-                                                              private val session: Session,
-                                                              private val controller: AutocompleteMemberController
+class AutocompleteMemberPresenter @AssistedInject constructor(
+        context: Context,
+        @Assisted val roomId: String,
+        private val session: Session,
+        private val controller: AutocompleteMemberController
 ) : RecyclerViewPresenter<AutocompleteMemberItem>(context), AutocompleteClickListener<AutocompleteMemberItem> {
 
     /* ==========================================================================================
@@ -144,7 +145,12 @@ class AutocompleteMemberPresenter @AssistedInject constructor(context: Context,
     private fun createEveryoneItem(query: CharSequence?) =
             room.roomSummary()
                     ?.takeIf { canNotifyEveryone() }
-                    ?.takeIf { query.isNullOrBlank() || MatrixItem.NOTIFY_EVERYONE.startsWith("@$query") }
+                    ?.takeIf {
+                        query.isNullOrBlank() ||
+                                SUGGEST_ROOM_KEYWORDS.any {
+                                    it.startsWith("@$query")
+                                }
+                    }
                     ?.let {
                         AutocompleteMemberItem.Everyone(it)
                     }
@@ -164,6 +170,7 @@ class AutocompleteMemberPresenter @AssistedInject constructor(context: Context,
     companion object {
         private const val ID_HEADER_MEMBERS = "ID_HEADER_MEMBERS"
         private const val ID_HEADER_EVERYONE = "ID_HEADER_EVERYONE"
+        private val SUGGEST_ROOM_KEYWORDS = setOf(MatrixItem.NOTIFY_EVERYONE, "@channel", "@everyone", "@here")
     }
 }
 

@@ -22,6 +22,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.airbnb.mvrx.args
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.core.extensions.cleanup
 import im.vector.app.core.extensions.configureWith
 import im.vector.app.core.extensions.toReducedUrl
@@ -44,12 +45,14 @@ data class FtueAuthTermsLegacyStyleFragmentArgument(
 ) : Parcelable
 
 /**
- * LoginTermsFragment displays the list of policies the user has to accept
+ * LoginTermsFragment displays the list of policies the user has to accept.
  */
-class FtueAuthLegacyStyleTermsFragment @Inject constructor(
-        private val policyController: PolicyController
-) : AbstractFtueAuthFragment<FragmentLoginTermsBinding>(),
+@AndroidEntryPoint
+class FtueAuthLegacyStyleTermsFragment :
+        AbstractFtueAuthFragment<FragmentLoginTermsBinding>(),
         PolicyController.PolicyControllerListener {
+
+    @Inject lateinit var policyController: PolicyController
 
     private val params: FtueAuthTermsLegacyStyleFragmentArgument by args()
 

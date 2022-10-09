@@ -26,6 +26,7 @@ import org.matrix.android.sdk.api.session.crypto.crosssigning.CrossSigningServic
 import org.matrix.android.sdk.api.session.crypto.crosssigning.DeviceTrustLevel
 import org.matrix.android.sdk.api.session.crypto.keysbackup.KeysBackupService
 import org.matrix.android.sdk.api.session.crypto.keyshare.GossipingRequestListener
+import org.matrix.android.sdk.api.session.crypto.model.AuditTrail
 import org.matrix.android.sdk.api.session.crypto.model.CryptoDeviceInfo
 import org.matrix.android.sdk.api.session.crypto.model.DeviceInfo
 import org.matrix.android.sdk.api.session.crypto.model.DevicesListResponse
@@ -35,12 +36,12 @@ import org.matrix.android.sdk.api.session.crypto.model.MXDeviceInfo
 import org.matrix.android.sdk.api.session.crypto.model.MXEncryptEventContentResult
 import org.matrix.android.sdk.api.session.crypto.model.MXEventDecryptionResult
 import org.matrix.android.sdk.api.session.crypto.model.MXUsersDevicesMap
-import org.matrix.android.sdk.api.session.crypto.model.OutgoingRoomKeyRequest
-import org.matrix.android.sdk.api.session.crypto.model.RoomKeyRequestBody
 import org.matrix.android.sdk.api.session.crypto.verification.VerificationService
 import org.matrix.android.sdk.api.session.events.model.Content
 import org.matrix.android.sdk.api.session.events.model.Event
 import org.matrix.android.sdk.api.session.events.model.content.RoomKeyWithHeldContent
+import org.matrix.android.sdk.api.util.Optional
+import org.matrix.android.sdk.internal.crypto.model.SessionInfo
 
 interface CryptoService {
 
@@ -60,6 +61,8 @@ interface CryptoService {
 
     fun isRoomBlacklistUnverifiedDevices(roomId: String?): Boolean
 
+    fun getLiveBlockUnverifiedDevices(roomId: String): LiveData<Boolean>
+
     fun setWarnOnUnknownDevices(warn: Boolean)
 
     fun setDeviceVerification(trustLevel: DeviceTrustLevel, userId: String, deviceId: String)
@@ -76,25 +79,62 @@ interface CryptoService {
 
     fun setGlobalBlacklistUnverifiedDevices(block: Boolean)
 
-    fun setRoomUnBlacklistUnverifiedDevices(roomId: String)
+    fun getLiveGlobalCryptoConfig(): LiveData<GlobalCryptoConfig>
+
+    /**
+     * Enable or disable key gossiping.
+     * Default is true.
+     * If set to false this device won't send key_request nor will accept key forwarded
+     */
+    fun enableKeyGossiping(enable: Boolean)
+
+    fun isKeyGossipingEnabled(): Boolean
+
+    /**
+     * As per MSC3061.
+     * If true will make it possible to share part of e2ee room history
+     * on invite depending on the room visibility setting.
+     */
+    fun enableShareKeyOnInvite(enable: Boolean)
+
+    /**
+     * As per MSC3061.
+     * If true will make it possible to share part of e2ee room history
+     * on invite depending on the room visibility setting.
+     */
+    fun isShareKeysOnInviteEnabled(): Boolean
+
+    fun setRoomUnBlockUnverifiedDevices(roomId: String)
 
     fun getDeviceTrackingStatus(userId: String): Int
 
-    suspend fun importRoomKeys(roomKeysAsArray: ByteArray,
-                               password: String,
-                               progressListener: ProgressListener?): ImportRoomKeysResult
+    suspend fun importRoomKeys(
+            roomKeysAsArray: ByteArray,
+            password: String,
+            progressListener: ProgressListener?
+    ): ImportRoomKeysResult
 
     suspend fun exportRoomKeys(password: String): ByteArray
 
-    fun setRoomBlacklistUnverifiedDevices(roomId: String)
+    fun setRoomBlockUnverifiedDevices(roomId: String, block: Boolean)
 
-    fun getDeviceInfo(userId: String, deviceId: String?): CryptoDeviceInfo?
+    fun getCryptoDeviceInfo(userId: String, deviceId: String?): CryptoDeviceInfo?
+
+    fun getCryptoDeviceInfo(deviceId: String, callback: MatrixCallback<DeviceInfo>)
+
+    fun getCryptoDeviceInfo(userId: String): List<CryptoDeviceInfo>
+
+    fun getLiveCryptoDeviceInfo(): LiveData<List<CryptoDeviceInfo>>
+
+    fun getLiveCryptoDeviceInfoWithId(deviceId: String): LiveData<Optional<CryptoDeviceInfo>>
+
+    fun getLiveCryptoDeviceInfo(userId: String): LiveData<List<CryptoDeviceInfo>>
+
+    fun getLiveCryptoDeviceInfo(userIds: List<String>): LiveData<List<CryptoDeviceInfo>>
 
     fun requestRoomKeyForEvent(event: Event)
 
     fun reRequestRoomKeyForEvent(event: Event)
-
-    fun cancelRoomKeyRequest(requestBody: RoomKeyRequestBody)
 
     fun addRoomKeysRequestListener(listener: GossipingRequestListener)
 
@@ -104,19 +144,21 @@ interface CryptoService {
 
     fun getMyDevicesInfo(): List<DeviceInfo>
 
-    fun getLiveMyDevicesInfo(): LiveData<List<DeviceInfo>>
+    fun getMyDevicesInfoLive(): LiveData<List<DeviceInfo>>
 
-    fun getDeviceInfo(deviceId: String, callback: MatrixCallback<DeviceInfo>)
+    fun getMyDevicesInfoLive(deviceId: String): LiveData<Optional<DeviceInfo>>
 
     fun inboundGroupSessionsCount(onlyBackedUp: Boolean): Int
 
     fun isRoomEncrypted(roomId: String): Boolean
 
     // TODO This could be removed from this interface
-    fun encryptEventContent(eventContent: Content,
-                            eventType: String,
-                            roomId: String,
-                            callback: MatrixCallback<MXEncryptEventContentResult>)
+    fun encryptEventContent(
+            eventContent: Content,
+            eventType: String,
+            roomId: String,
+            callback: MatrixCallback<MXEncryptEventContentResult>
+    )
 
     fun discardOutboundSession(roomId: String)
 
@@ -131,35 +173,36 @@ interface CryptoService {
 
     fun downloadKeys(userIds: List<String>, forceDownload: Boolean, callback: MatrixCallback<MXUsersDevicesMap<CryptoDeviceInfo>>)
 
-    fun getCryptoDeviceInfo(userId: String): List<CryptoDeviceInfo>
-
-    fun getLiveCryptoDeviceInfo(): LiveData<List<CryptoDeviceInfo>>
-
-    fun getLiveCryptoDeviceInfo(userId: String): LiveData<List<CryptoDeviceInfo>>
-
-    fun getLiveCryptoDeviceInfo(userIds: List<String>): LiveData<List<CryptoDeviceInfo>>
-
     fun addNewSessionListener(newSessionListener: NewSessionListener)
     fun removeSessionListener(listener: NewSessionListener)
 
-    fun getOutgoingRoomKeyRequests(): List<OutgoingRoomKeyRequest>
-    fun getOutgoingRoomKeyRequestsPaged(): LiveData<PagedList<OutgoingRoomKeyRequest>>
+    fun getOutgoingRoomKeyRequests(): List<OutgoingKeyRequest>
+    fun getOutgoingRoomKeyRequestsPaged(): LiveData<PagedList<OutgoingKeyRequest>>
 
     fun getIncomingRoomKeyRequests(): List<IncomingRoomKeyRequest>
     fun getIncomingRoomKeyRequestsPaged(): LiveData<PagedList<IncomingRoomKeyRequest>>
 
-    fun getGossipingEventsTrail(): LiveData<PagedList<Event>>
-    fun getGossipingEvents(): List<Event>
+    /**
+     * Can be called by the app layer to accept a request manually.
+     * Use carefully as it is prone to social attacks.
+     */
+    suspend fun manuallyAcceptRoomKeyRequest(request: IncomingRoomKeyRequest)
+
+    fun getGossipingEventsTrail(): LiveData<PagedList<AuditTrail>>
+    fun getGossipingEvents(): List<AuditTrail>
 
     // For testing shared session
     fun getSharedWithInfo(roomId: String?, sessionId: String): MXUsersDevicesMap<Int>
     fun getWithHeldMegolmSession(roomId: String, sessionId: String): RoomKeyWithHeldContent?
-
-    fun logDbUsageInfo()
 
     /**
      * Perform any background tasks that can be done before a message is ready to
      * send, in order to speed up sending of the message.
      */
     fun prepareToEncrypt(roomId: String, callback: MatrixCallback<Unit>)
+
+    /**
+     * Share all inbound sessions of the last chunk messages to the provided userId devices.
+     */
+    suspend fun sendSharedHistoryKeys(roomId: String, userId: String, sessionInfoSet: Set<SessionInfo>?)
 }

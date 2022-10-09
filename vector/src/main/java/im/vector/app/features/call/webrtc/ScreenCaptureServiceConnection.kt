@@ -27,28 +27,43 @@ class ScreenCaptureServiceConnection @Inject constructor(
         private val context: Context
 ) : ServiceConnection {
 
-    private var isBound = false
-    private var screenCaptureService: ScreenCaptureService? = null
+    interface Callback {
+        fun onServiceConnected()
+    }
 
-    fun bind() {
-        if (!isBound) {
-            Intent(context, ScreenCaptureService::class.java).also { intent ->
+    private var isBound = false
+    private var screenCaptureAndroidService: ScreenCaptureAndroidService? = null
+    private var callback: Callback? = null
+
+    fun bind(callback: Callback) {
+        this.callback = callback
+
+        if (isBound) {
+            callback.onServiceConnected()
+        } else {
+            Intent(context, ScreenCaptureAndroidService::class.java).also { intent ->
                 context.bindService(intent, this, 0)
             }
         }
     }
 
+    fun unbind() {
+        callback = null
+    }
+
     fun stopScreenCapturing() {
-        screenCaptureService?.stopService()
+        screenCaptureAndroidService?.stopService()
     }
 
     override fun onServiceConnected(className: ComponentName, binder: IBinder) {
-        screenCaptureService = (binder as ScreenCaptureService.LocalBinder).getService()
+        screenCaptureAndroidService = (binder as ScreenCaptureAndroidService.LocalBinder).getService()
         isBound = true
+        callback?.onServiceConnected()
     }
 
     override fun onServiceDisconnected(className: ComponentName) {
         isBound = false
-        screenCaptureService = null
+        screenCaptureAndroidService = null
+        callback = null
     }
 }

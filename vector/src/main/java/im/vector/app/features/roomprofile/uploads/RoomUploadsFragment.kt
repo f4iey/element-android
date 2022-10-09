@@ -27,6 +27,7 @@ import com.airbnb.mvrx.fragmentViewModel
 import com.airbnb.mvrx.withState
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.intent.getMimeTypeFromUri
 import im.vector.app.core.platform.VectorBaseFragment
@@ -42,11 +43,13 @@ import kotlinx.coroutines.launch
 import org.matrix.android.sdk.api.util.toMatrixItem
 import javax.inject.Inject
 
-class RoomUploadsFragment @Inject constructor(
-        private val avatarRenderer: AvatarRenderer,
-        private val notificationUtils: NotificationUtils,
-        private val clock: Clock,
-) : VectorBaseFragment<FragmentRoomUploadsBinding>() {
+@AndroidEntryPoint
+class RoomUploadsFragment :
+        VectorBaseFragment<FragmentRoomUploadsBinding>() {
+
+    @Inject lateinit var avatarRenderer: AvatarRenderer
+    @Inject lateinit var notificationUtils: NotificationUtils
+    @Inject lateinit var clock: Clock
 
     private val roomProfileArgs: RoomProfileArgs by args()
 
@@ -82,7 +85,7 @@ class RoomUploadsFragment @Inject constructor(
                 is RoomUploadsViewEvents.FileReadyForSharing -> {
                     shareMedia(requireContext(), it.file, getMimeTypeFromUri(requireContext(), it.file.toUri()))
                 }
-                is RoomUploadsViewEvents.FileReadyForSaving  -> {
+                is RoomUploadsViewEvents.FileReadyForSaving -> {
                     lifecycleScope.launch {
                         runCatching {
                             saveMedia(
@@ -100,7 +103,7 @@ class RoomUploadsFragment @Inject constructor(
                     }
                     Unit
                 }
-                is RoomUploadsViewEvents.Failure             -> showFailure(it.throwable)
+                is RoomUploadsViewEvents.Failure -> showFailure(it.throwable)
             }
         }
     }

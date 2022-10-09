@@ -24,6 +24,7 @@ import android.widget.ProgressBar
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.annotation.IdRes
+import androidx.annotation.LayoutRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -39,10 +40,12 @@ import org.matrix.android.sdk.api.session.threads.ThreadDetails
 import org.matrix.android.sdk.api.util.MatrixItem
 
 /**
- * Base timeline item that adds an optional information bar with the sender avatar, name, time, send state
- * Adds associated click listeners (on avatar, displayname)
+ * Base timeline item that adds an optional information bar with the sender avatar, name, time, send state.
+ * Adds associated click listeners (on avatar, displayname).
  */
-abstract class AbsMessageItem<H : AbsMessageItem.Holder> : AbsBaseMessageItem<H>() {
+abstract class AbsMessageItem<H : AbsMessageItem.Holder>(
+        @LayoutRes layoutId: Int = R.layout.item_timeline_event_base
+) : AbsBaseMessageItem<H>(layoutId) {
 
     override val baseAttributes: AbsBaseMessageItem.Attributes
         get() = attributes
@@ -57,12 +60,6 @@ abstract class AbsMessageItem<H : AbsMessageItem.Holder> : AbsBaseMessageItem<H>
     private val _avatarClickListener = object : ClickListener {
         override fun invoke(p1: View) {
             attributes.avatarCallback?.onAvatarClicked(attributes.informationData)
-        }
-    }
-
-    private val _memberNameClickListener = object : ClickListener {
-        override fun invoke(p1: View) {
-            attributes.avatarCallback?.onMemberNameClicked(attributes.informationData)
         }
     }
 
@@ -92,7 +89,7 @@ abstract class AbsMessageItem<H : AbsMessageItem.Holder> : AbsBaseMessageItem<H>
             holder.memberNameView.isVisible = true
             holder.memberNameView.text = attributes.informationData.memberName
             holder.memberNameView.setTextColor(attributes.getMemberNameColor())
-            holder.memberNameView.onClick(_memberNameClickListener)
+            holder.memberNameView.onClick(attributes.memberClickListener)
             holder.memberNameView.setOnLongClickListener(attributes.itemLongClickListener)
         } else {
             holder.memberNameView.setOnClickListener(null)
@@ -178,6 +175,7 @@ abstract class AbsMessageItem<H : AbsMessageItem.Holder> : AbsBaseMessageItem<H>
             override val itemLongClickListener: View.OnLongClickListener? = null,
             override val itemClickListener: ClickListener? = null,
             val memberClickListener: ClickListener? = null,
+            val callback: TimelineEventController.Callback? = null,
             override val reactionPillCallback: TimelineEventController.ReactionPillCallback? = null,
             val avatarCallback: TimelineEventController.AvatarCallback? = null,
             val threadCallback: TimelineEventController.ThreadCallback? = null,
@@ -187,6 +185,7 @@ abstract class AbsMessageItem<H : AbsMessageItem.Holder> : AbsBaseMessageItem<H>
             val threadSummaryFormatted: String? = null,
             val threadDetails: ThreadDetails? = null,
             val areThreadMessagesEnabled: Boolean = false,
+            val autoplayAnimatedImages: Boolean = false,
             override val reactionsSummaryEvents: ReactionsSummaryEvents? = null,
     ) : AbsBaseMessageItem.Attributes {
 

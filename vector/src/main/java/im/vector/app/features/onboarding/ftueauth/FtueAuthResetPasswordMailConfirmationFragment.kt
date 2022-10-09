@@ -21,17 +21,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.databinding.FragmentLoginResetPasswordMailConfirmationBinding
 import im.vector.app.features.onboarding.OnboardingAction
 import im.vector.app.features.onboarding.OnboardingViewState
 import org.matrix.android.sdk.api.failure.is401
-import javax.inject.Inject
 
 /**
- * In this screen, the user is asked to check his email and to click on a button once it's done
+ * In this screen, the user is asked to check their email and to click on a button once it's done.
  */
-class FtueAuthResetPasswordMailConfirmationFragment @Inject constructor() : AbstractFtueAuthFragment<FragmentLoginResetPasswordMailConfirmationBinding>() {
+@AndroidEntryPoint
+class FtueAuthResetPasswordMailConfirmationFragment :
+        AbstractFtueAuthFragment<FragmentLoginResetPasswordMailConfirmationBinding>() {
 
     override fun getBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentLoginResetPasswordMailConfirmationBinding {
         return FragmentLoginResetPasswordMailConfirmationBinding.inflate(inflater, container, false)
@@ -44,7 +46,7 @@ class FtueAuthResetPasswordMailConfirmationFragment @Inject constructor() : Abst
     }
 
     private fun setupUi(state: OnboardingViewState) {
-        views.resetPasswordMailConfirmationNotice.text = getString(R.string.login_reset_password_mail_confirmation_notice, state.resetPasswordEmail)
+        views.resetPasswordMailConfirmationNotice.text = getString(R.string.login_reset_password_mail_confirmation_notice, state.resetState.email)
     }
 
     private fun submit() {

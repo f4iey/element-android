@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.core.view.isVisible
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.extensions.toReducedUrl
 import im.vector.app.databinding.FragmentLoginSignupSigninSelectionBinding
@@ -30,16 +31,17 @@ import im.vector.app.features.login.LoginMode
 import im.vector.app.features.login.SSORedirectRouterActivity
 import im.vector.app.features.login.ServerType
 import im.vector.app.features.login.SignMode
-import im.vector.app.features.login.SocialLoginButtonsView
-import im.vector.app.features.login.ssoIdentityProviders
+import im.vector.app.features.login.SocialLoginButtonsView.Mode
+import im.vector.app.features.login.render
 import im.vector.app.features.onboarding.OnboardingAction
 import im.vector.app.features.onboarding.OnboardingViewState
-import javax.inject.Inject
 
 /**
- * In this screen, the user is asked to sign up or to sign in to the homeserver
+ * In this screen, the user is asked to sign up or to sign in to the homeserver.
  */
-class FtueAuthSignUpSignInSelectionFragment @Inject constructor() : AbstractSSOFtueAuthFragment<FragmentLoginSignupSigninSelectionBinding>() {
+@AndroidEntryPoint
+class FtueAuthSignUpSignInSelectionFragment :
+        AbstractSSOFtueAuthFragment<FragmentLoginSignupSigninSelectionBinding>() {
 
     override fun getBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentLoginSignupSigninSelectionBinding {
         return FragmentLoginSignupSigninSelectionBinding.inflate(inflater, container, false)
@@ -63,35 +65,32 @@ class FtueAuthSignUpSignInSelectionFragment @Inject constructor() : AbstractSSOF
                     title = getString(R.string.login_connect_to, state.selectedHomeserver.userFacingUrl.toReducedUrl()),
                     subtitle = getString(R.string.login_server_matrix_org_text)
             )
-            ServerType.EMS       -> renderServerInformation(
+            ServerType.EMS -> renderServerInformation(
                     icon = R.drawable.ic_logo_element_matrix_services,
                     title = getString(R.string.login_connect_to_modular),
                     subtitle = state.selectedHomeserver.userFacingUrl.toReducedUrl()
             )
-            ServerType.Other     -> renderServerInformation(
+            ServerType.Other -> renderServerInformation(
                     icon = null,
                     title = getString(R.string.login_server_other_title),
                     subtitle = getString(R.string.login_connect_to, state.selectedHomeserver.userFacingUrl.toReducedUrl())
             )
-            ServerType.Unknown   -> Unit /* Should not happen */
+            ServerType.Unknown -> Unit /* Should not happen */
         }
 
         when (state.selectedHomeserver.preferredLoginMode) {
             is LoginMode.SsoAndPassword -> {
                 views.loginSignupSigninSignInSocialLoginContainer.isVisible = true
-                views.loginSignupSigninSocialLoginButtons.ssoIdentityProviders = state.selectedHomeserver.preferredLoginMode.ssoIdentityProviders()?.sorted()
-                views.loginSignupSigninSocialLoginButtons.listener = object : SocialLoginButtonsView.InteractionListener {
-                    override fun onProviderSelected(id: String?) {
-                        viewModel.getSsoUrl(
-                                redirectUrl = SSORedirectRouterActivity.VECTOR_REDIRECT_URL,
-                                deviceId = state.deviceId,
-                                providerId = id
-                        )
-                                ?.let { openInCustomTab(it) }
-                    }
+                views.loginSignupSigninSocialLoginButtons.render(state.selectedHomeserver.preferredLoginMode.ssoState, Mode.MODE_CONTINUE) { provider ->
+                    viewModel.fetchSsoUrl(
+                            redirectUrl = SSORedirectRouterActivity.VECTOR_REDIRECT_URL,
+                            deviceId = state.deviceId,
+                            provider = provider
+                    )
+                            ?.let { openInCustomTab(it) }
                 }
             }
-            else                        -> {
+            else -> {
                 // SSO only is managed without container as well as No sso
                 views.loginSignupSigninSignInSocialLoginContainer.isVisible = false
                 views.loginSignupSigninSocialLoginButtons.ssoIdentityProviders = null
@@ -114,7 +113,7 @@ class FtueAuthSignUpSignInSelectionFragment @Inject constructor() : AbstractSSOF
                 views.loginSignupSigninSubmit.text = getString(R.string.login_signin_sso)
                 views.loginSignupSigninSignIn.isVisible = false
             }
-            else             -> {
+            else -> {
                 views.loginSignupSigninSubmit.text = getString(R.string.login_signup)
                 views.loginSignupSigninSignIn.isVisible = true
             }
@@ -123,10 +122,10 @@ class FtueAuthSignUpSignInSelectionFragment @Inject constructor() : AbstractSSOF
 
     private fun submit() = withState(viewModel) { state ->
         if (state.selectedHomeserver.preferredLoginMode is LoginMode.Sso) {
-            viewModel.getSsoUrl(
+            viewModel.fetchSsoUrl(
                     redirectUrl = SSORedirectRouterActivity.VECTOR_REDIRECT_URL,
                     deviceId = state.deviceId,
-                    providerId = null
+                    provider = null
             )
                     ?.let { openInCustomTab(it) }
         } else {

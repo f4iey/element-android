@@ -92,23 +92,24 @@ class CaptchaWebview @Inject constructor(
                 Timber.e("## onError() : $errorMessage")
             }
 
-            @SuppressLint("NewApi")
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
                 super.onReceivedHttpError(view, request, errorResponse)
                 when {
                     request.url.toString().endsWith("favicon.ico") -> {
                         // ignore favicon errors
                     }
-                    else                                           -> onError(errorResponse.toText())
+                    else -> onError(errorResponse.toText())
                 }
             }
 
+            @Deprecated("Deprecated in Java")
             override fun onReceivedError(view: WebView, errorCode: Int, description: String, failingUrl: String) {
                 @Suppress("DEPRECATION")
                 super.onReceivedError(view, errorCode, description, failingUrl)
                 onError(description)
             }
 
+            @Deprecated("Deprecated in Java")
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                 if (url?.startsWith("js:") == true) {
                     val javascriptResponse = parseJsonFromUrl(url)

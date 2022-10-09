@@ -36,8 +36,8 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * In this screen, the user is viewing a message informing that he has been logged out
- * Extends LoginActivity to get the login with SSO and forget password functionality for (nearly) free
+ * In this screen, the user is viewing a message informing that he has been logged out.
+ * Extends LoginActivity to get the login with SSO and forget password functionality for (nearly) free.
  */
 @AndroidEntryPoint
 class SoftLogoutActivity : LoginActivity() {
@@ -59,7 +59,7 @@ class SoftLogoutActivity : LoginActivity() {
 
     private fun handleSoftLogoutViewEvents(softLogoutViewEvents: SoftLogoutViewEvents) {
         when (softLogoutViewEvents) {
-            is SoftLogoutViewEvents.Failure          ->
+            is SoftLogoutViewEvents.Failure ->
                 showError(errorFormatter.toHumanReadable(softLogoutViewEvents.throwable))
             is SoftLogoutViewEvents.ErrorNotSameUser -> {
                 // Pop the backstack
@@ -74,7 +74,7 @@ class SoftLogoutActivity : LoginActivity() {
                         )
                 )
             }
-            is SoftLogoutViewEvents.ClearData        -> {
+            is SoftLogoutViewEvents.ClearData -> {
                 MainActivity.restartApp(this, MainActivityArgs(clearCredentials = true))
             }
         }

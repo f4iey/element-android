@@ -39,7 +39,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 /**
- * Receives actions broadcast by notification (on click, on dismiss, inline replies, etc.)
+ * Receives actions broadcast by notification (on click, on dismiss, inline replies, etc.).
  */
 @AndroidEntryPoint
 class NotificationBroadcastReceiver : BroadcastReceiver() {
@@ -48,31 +48,32 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
     @Inject lateinit var activeSessionHolder: ActiveSessionHolder
     @Inject lateinit var analyticsTracker: AnalyticsTracker
     @Inject lateinit var clock: Clock
+    @Inject lateinit var actionIds: NotificationActionIds
 
     override fun onReceive(context: Context?, intent: Intent?) {
         if (intent == null || context == null) return
         Timber.v("NotificationBroadcastReceiver received : $intent")
         when (intent.action) {
-            NotificationUtils.SMART_REPLY_ACTION        ->
+            actionIds.smartReply ->
                 handleSmartReply(intent, context)
-            NotificationUtils.DISMISS_ROOM_NOTIF_ACTION ->
+            actionIds.dismissRoom ->
                 intent.getStringExtra(KEY_ROOM_ID)?.let { roomId ->
                     notificationDrawerManager.updateEvents { it.clearMessagesForRoom(roomId) }
                 }
-            NotificationUtils.DISMISS_SUMMARY_ACTION    ->
+            actionIds.dismissSummary ->
                 notificationDrawerManager.clearAllEvents()
-            NotificationUtils.MARK_ROOM_READ_ACTION     ->
+            actionIds.markRoomRead ->
                 intent.getStringExtra(KEY_ROOM_ID)?.let { roomId ->
                     notificationDrawerManager.updateEvents { it.clearMessagesForRoom(roomId) }
                     handleMarkAsRead(roomId)
                 }
-            NotificationUtils.JOIN_ACTION               -> {
+            actionIds.join -> {
                 intent.getStringExtra(KEY_ROOM_ID)?.let { roomId ->
                     notificationDrawerManager.updateEvents { it.clearMemberShipNotificationForRoom(roomId) }
                     handleJoinRoom(roomId)
                 }
             }
-            NotificationUtils.REJECT_ACTION             -> {
+            actionIds.reject -> {
                 intent.getStringExtra(KEY_ROOM_ID)?.let { roomId ->
                     notificationDrawerManager.updateEvents { it.clearMemberShipNotificationForRoom(roomId) }
                     handleRejectRoom(roomId)
@@ -145,7 +146,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
                         ?: context?.getString(R.string.notification_sender_me),
                 senderId = session.myUserId,
                 body = message,
-                imageUri = null,
+                imageUriString = null,
                 roomId = room.roomId,
                 roomName = room.roomSummary()?.displayName ?: room.roomId,
                 roomIsDirect = room.roomSummary()?.isDirect == true,

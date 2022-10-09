@@ -30,6 +30,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.map
 import androidx.preference.Preference
 import androidx.preference.SwitchPreference
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.di.ActiveSessionHolder
 import im.vector.app.core.extensions.registerStartForActivityResult
@@ -37,11 +38,14 @@ import im.vector.app.core.preference.VectorEditTextPreference
 import im.vector.app.core.preference.VectorPreference
 import im.vector.app.core.preference.VectorPreferenceCategory
 import im.vector.app.core.preference.VectorSwitchPreference
+import im.vector.app.core.pushers.FcmHelper
 import im.vector.app.core.pushers.PushersManager
+import im.vector.app.core.pushers.UnifiedPushHelper
 import im.vector.app.core.services.GuardServiceStarter
 import im.vector.app.core.utils.combineLatest
 import im.vector.app.core.utils.isIgnoringBatteryOptimizations
 import im.vector.app.core.utils.requestDisablingBatteryOptimization
+import im.vector.app.features.VectorFeatures
 import im.vector.app.features.analytics.plan.MobileScreen
 import im.vector.app.features.notifications.NotificationUtils
 import im.vector.app.features.settings.BackgroundSyncMode
@@ -49,7 +53,6 @@ import im.vector.app.features.settings.BackgroundSyncModeChooserDialog
 import im.vector.app.features.settings.VectorPreferences
 import im.vector.app.features.settings.VectorSettingsBaseFragment
 import im.vector.app.features.settings.VectorSettingsFragmentInteractionListener
-import im.vector.app.push.fcm.FcmHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.matrix.android.sdk.api.extensions.tryOrNull
@@ -61,13 +64,18 @@ import org.matrix.android.sdk.api.session.pushrules.RuleKind
 import javax.inject.Inject
 
 // Referenced in vector_settings_preferences_root.xml
-class VectorSettingsNotificationPreferenceFragment @Inject constructor(
-        private val pushManager: PushersManager,
-        private val activeSessionHolder: ActiveSessionHolder,
-        private val vectorPreferences: VectorPreferences,
-        private val guardServiceStarter: GuardServiceStarter
-) : VectorSettingsBaseFragment(),
+@AndroidEntryPoint
+class VectorSettingsNotificationPreferenceFragment :
+        VectorSettingsBaseFragment(),
         BackgroundSyncModeChooserDialog.InteractionListener {
+
+    @Inject lateinit var unifiedPushHelper: UnifiedPushHelper
+    @Inject lateinit var pushersManager: PushersManager
+    @Inject lateinit var fcmHelper: FcmHelper
+    @Inject lateinit var activeSessionHolder: ActiveSessionHolder
+    @Inject lateinit var vectorPreferences: VectorPreferences
+    @Inject lateinit var guardServiceStarter: GuardServiceStarter
+    @Inject lateinit var vectorFeatures: VectorFeatures
 
     override var titleRes: Int = R.string.settings_notifications
     override val preferenceXmlRes = R.xml.vector_settings_notifications
@@ -98,14 +106,21 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
         findPreference<SwitchPreference>(VectorPreferences.SETTINGS_ENABLE_THIS_DEVICE_PREFERENCE_KEY)?.let {
             it.setTransactionalSwitchChangeListener(lifecycleScope) { isChecked ->
                 if (isChecked) {
-                    FcmHelper.getFcmToken(requireContext())?.let {
-                        pushManager.registerPusherWithFcmKey(it)
+                    unifiedPushHelper.register(requireActivity()) {
+                        // Update the summary
+                        if (unifiedPushHelper.isEmbeddedDistributor()) {
+                            fcmHelper.ensureFcmTokenIsRetrieved(
+                                    requireActivity(),
+                                    pushersManager,
+                                    vectorPreferences.areNotificationEnabledForDevice()
+                            )
+                        }
+                        findPreference<VectorPreference>(VectorPreferences.SETTINGS_NOTIFICATION_METHOD_KEY)
+                                ?.summary = unifiedPushHelper.getCurrentDistributorName()
                     }
                 } else {
-                    FcmHelper.getFcmToken(requireContext())?.let {
-                        pushManager.unregisterPusher(it)
-                        session.pushersService().refreshPushers()
-                    }
+                    unifiedPushHelper.unregister(pushersManager)
+                    session.pushersService().refreshPushers()
                 }
             }
         }
@@ -148,6 +163,29 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
             }
         }
 
+        findPreference<VectorPreference>(VectorPreferences.SETTINGS_NOTIFICATION_METHOD_KEY)?.let {
+            if (vectorFeatures.allowExternalUnifiedPushDistributors()) {
+                it.summary = unifiedPushHelper.getCurrentDistributorName()
+                it.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                    unifiedPushHelper.forceRegister(requireActivity(), pushersManager) {
+                        if (unifiedPushHelper.isEmbeddedDistributor()) {
+                            fcmHelper.ensureFcmTokenIsRetrieved(
+                                    requireActivity(),
+                                    pushersManager,
+                                    vectorPreferences.areNotificationEnabledForDevice()
+                            )
+                        }
+                        it.summary = unifiedPushHelper.getCurrentDistributorName()
+                        session.pushersService().refreshPushers()
+                        refreshBackgroundSyncPrefs()
+                    }
+                    true
+                }
+            } else {
+                it.isVisible = false
+            }
+        }
+
         bindEmailNotifications()
         refreshBackgroundSyncPrefs()
 
@@ -182,9 +220,9 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
                     pref.isChecked = isEnabled
                     pref.setTransactionalSwitchChangeListener(lifecycleScope) { isChecked ->
                         if (isChecked) {
-                            pushManager.registerEmailForPush(emailPid.email)
+                            pushersManager.registerEmailForPush(emailPid.email)
                         } else {
-                            pushManager.unregisterEmailPusher(emailPid.email)
+                            pushersManager.unregisterEmailPusher(emailPid.email)
                         }
                     }
                     category.addPreference(pref)
@@ -215,14 +253,14 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
     private fun refreshBackgroundSyncPrefs() {
         findPreference<VectorPreference>(VectorPreferences.SETTINGS_FDROID_BACKGROUND_SYNC_MODE)?.let {
             it.summary = when (vectorPreferences.getFdroidSyncBackgroundMode()) {
-                BackgroundSyncMode.FDROID_BACKGROUND_SYNC_MODE_FOR_BATTERY  -> getString(R.string.settings_background_fdroid_sync_mode_battery)
+                BackgroundSyncMode.FDROID_BACKGROUND_SYNC_MODE_FOR_BATTERY -> getString(R.string.settings_background_fdroid_sync_mode_battery)
                 BackgroundSyncMode.FDROID_BACKGROUND_SYNC_MODE_FOR_REALTIME -> getString(R.string.settings_background_fdroid_sync_mode_real_time)
-                BackgroundSyncMode.FDROID_BACKGROUND_SYNC_MODE_DISABLED     -> getString(R.string.settings_background_fdroid_sync_mode_disabled)
+                BackgroundSyncMode.FDROID_BACKGROUND_SYNC_MODE_DISABLED -> getString(R.string.settings_background_fdroid_sync_mode_disabled)
             }
         }
 
         findPreference<VectorPreferenceCategory>(VectorPreferences.SETTINGS_BACKGROUND_SYNC_PREFERENCE_KEY)?.let {
-            it.isVisible = !FcmHelper.isPushSupported()
+            it.isVisible = unifiedPushHelper.isBackgroundSync()
         }
 
         val backgroundSyncEnabled = vectorPreferences.isBackgroundSyncEnabled()
@@ -236,12 +274,12 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
         }
         when {
             backgroundSyncEnabled -> guardServiceStarter.start()
-            else                  -> guardServiceStarter.stop()
+            else -> guardServiceStarter.stop()
         }
     }
 
     /**
-     * Convert a delay in seconds to string
+     * Convert a delay in seconds to string.
      *
      * @param seconds the delay in seconds
      * @return the text
@@ -331,7 +369,7 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
 
     private fun refreshPref() {
         // This pref may have change from troubleshoot pref fragment
-        if (!FcmHelper.isPushSupported()) {
+        if (unifiedPushHelper.isBackgroundSync()) {
             findPreference<VectorSwitchPreference>(VectorPreferences.SETTINGS_START_ON_BOOT_PREFERENCE_KEY)
                     ?.isChecked = vectorPreferences.autoStartOnBoot()
         }
@@ -352,13 +390,13 @@ class VectorSettingsNotificationPreferenceFragment @Inject constructor(
         super.onDetach()
     }
 
-    override fun onPreferenceTreeClick(preference: Preference?): Boolean {
-        return when (preference?.key) {
+    override fun onPreferenceTreeClick(preference: Preference): Boolean {
+        return when (preference.key) {
             VectorPreferences.SETTINGS_ENABLE_ALL_NOTIF_PREFERENCE_KEY -> {
                 updateEnabledForAccount(preference)
                 true
             }
-            else                                                       -> {
+            else -> {
                 return super.onPreferenceTreeClick(preference)
             }
         }

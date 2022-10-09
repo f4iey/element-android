@@ -30,6 +30,7 @@ import com.airbnb.mvrx.Success
 import com.airbnb.mvrx.args
 import com.airbnb.mvrx.fragmentViewModel
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.extensions.setTextOrHide
 import im.vector.app.core.platform.ButtonStateView
@@ -50,11 +51,13 @@ import org.matrix.android.sdk.api.util.MatrixItem
 import javax.inject.Inject
 
 /**
- * Note: this Fragment is also used for world readable room for the moment
+ * Note: this Fragment is also used for world readable room for the moment.
  */
-class RoomPreviewNoPreviewFragment @Inject constructor(
-        private val avatarRenderer: AvatarRenderer
-) : VectorBaseFragment<FragmentRoomPreviewNoPreviewBinding>() {
+@AndroidEntryPoint
+class RoomPreviewNoPreviewFragment :
+        VectorBaseFragment<FragmentRoomPreviewNoPreviewBinding>() {
+
+    @Inject lateinit var avatarRenderer: AvatarRenderer
 
     private val roomPreviewViewModel: RoomPreviewViewModel by fragmentViewModel()
     private val roomPreviewData: RoomPreviewData by args()
@@ -80,9 +83,9 @@ class RoomPreviewNoPreviewFragment @Inject constructor(
 
         views.roomPreviewNoPreviewJoin.render(
                 when (state.roomJoinState) {
-                    JoinState.NOT_JOINED    -> ButtonStateView.State.Button
-                    JoinState.JOINING       -> ButtonStateView.State.Loading
-                    JoinState.JOINED        -> ButtonStateView.State.Loaded
+                    JoinState.NOT_JOINED -> ButtonStateView.State.Button
+                    JoinState.JOINING -> ButtonStateView.State.Loading
+                    JoinState.JOINED -> ButtonStateView.State.Loaded
                     JoinState.JOINING_ERROR -> ButtonStateView.State.Error
                 }
         )
@@ -120,7 +123,7 @@ class RoomPreviewNoPreviewFragment @Inject constructor(
             is Success -> {
                 views.roomPreviewPeekingProgress.isVisible = false
                 when (state.peekingState.invoke()) {
-                    PeekingState.FOUND     -> {
+                    PeekingState.FOUND -> {
                         // show join buttons
                         views.roomPreviewNoPreviewJoin.isVisible = true
                         renderState(bestName, state.matrixItem(), state.roomTopic)
@@ -166,7 +169,7 @@ class RoomPreviewNoPreviewFragment @Inject constructor(
                         views.roomPreviewNoPreviewLabel.setText(R.string.room_preview_no_preview_join)
                         renderState(bestName, state.matrixItem().takeIf { state.roomAlias != null }, state.roomTopic)
                     }
-                    else                   -> {
+                    else -> {
                         views.roomPreviewNoPreviewJoin.isVisible = false
                         views.roomPreviewNoPreviewLabel.isVisible = true
                         views.roomPreviewNoPreviewLabel.setText(R.string.room_preview_not_found)
@@ -174,7 +177,7 @@ class RoomPreviewNoPreviewFragment @Inject constructor(
                     }
                 }
             }
-            else       -> {
+            else -> {
                 // Render with initial state, no peeking
                 views.roomPreviewPeekingProgress.isVisible = false
                 views.roomPreviewNoPreviewJoin.isVisible = true

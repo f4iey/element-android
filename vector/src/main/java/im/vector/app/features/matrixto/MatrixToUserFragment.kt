@@ -28,15 +28,18 @@ import com.airbnb.mvrx.Success
 import com.airbnb.mvrx.Uninitialized
 import com.airbnb.mvrx.parentFragmentViewModel
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.core.extensions.setTextOrHide
 import im.vector.app.core.platform.VectorBaseFragment
 import im.vector.app.databinding.FragmentMatrixToUserCardBinding
 import im.vector.app.features.home.AvatarRenderer
 import javax.inject.Inject
 
-class MatrixToUserFragment @Inject constructor(
-        private val avatarRenderer: AvatarRenderer
-) : VectorBaseFragment<FragmentMatrixToUserCardBinding>() {
+@AndroidEntryPoint
+class MatrixToUserFragment :
+        VectorBaseFragment<FragmentMatrixToUserCardBinding>() {
+
+    @Inject lateinit var avatarRenderer: AvatarRenderer
 
     private val sharedViewModel: MatrixToBottomSheetViewModel by parentFragmentViewModel()
 
@@ -60,16 +63,16 @@ class MatrixToUserFragment @Inject constructor(
             Uninitialized -> {
                 views.matrixToCardUserContentVisibility.isVisible = false
             }
-            is Loading    -> {
+            is Loading -> {
                 views.matrixToCardUserContentVisibility.isVisible = false
             }
-            is Success    -> {
+            is Success -> {
                 views.matrixToCardUserContentVisibility.isVisible = true
                 views.matrixToCardNameText.setTextOrHide(item.invoke().displayName)
                 views.matrixToCardUserIdText.setTextOrHide(item.invoke().id)
                 avatarRenderer.render(item.invoke(), views.matrixToCardAvatar)
             }
-            is Fail       -> {
+            is Fail -> {
                 // TODO display some error copy?
                 sharedViewModel.handle(MatrixToAction.FailedToResolveUser)
             }
@@ -80,17 +83,17 @@ class MatrixToUserFragment @Inject constructor(
                 views.matrixToCardButtonLoading.isVisible = false
                 views.matrixToCardSendMessageButton.isVisible = false
             }
-            is Success    -> {
+            is Success -> {
                 views.matrixToCardButtonLoading.isVisible = false
                 views.matrixToCardSendMessageButton.isVisible = true
             }
-            is Fail       -> {
+            is Fail -> {
                 views.matrixToCardButtonLoading.isVisible = false
                 views.matrixToCardSendMessageButton.isVisible = true
                 // TODO display some error copy?
                 sharedViewModel.handle(MatrixToAction.FailedToStartChatting)
             }
-            is Loading    -> {
+            is Loading -> {
                 views.matrixToCardButtonLoading.isVisible = true
                 views.matrixToCardSendMessageButton.isInvisible = true
             }

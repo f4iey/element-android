@@ -24,6 +24,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.mvrx.activityViewModel
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.core.extensions.cleanup
 import im.vector.app.core.extensions.configureWith
 import im.vector.app.core.extensions.hideKeyboard
@@ -44,9 +45,12 @@ import reactivecircus.flowbinding.android.widget.checkedChanges
 import reactivecircus.flowbinding.android.widget.textChanges
 import javax.inject.Inject
 
-class ContactsBookFragment @Inject constructor(
-        private val contactsBookController: ContactsBookController
-) : VectorBaseFragment<FragmentContactsBookBinding>(), ContactsBookController.Callback {
+@AndroidEntryPoint
+class ContactsBookFragment :
+        VectorBaseFragment<FragmentContactsBookBinding>(),
+        ContactsBookController.Callback {
+
+    @Inject lateinit var contactsBookController: ContactsBookController
 
     override fun getBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentContactsBookBinding {
         return FragmentContactsBookBinding.inflate(inflater, container, false)
@@ -70,7 +74,7 @@ class ContactsBookFragment @Inject constructor(
                 .allowBack(useCross = true)
         contactsBookViewModel.observeViewEvents {
             when (it) {
-                is ContactsBookViewEvents.Failure             -> showFailure(it.throwable)
+                is ContactsBookViewEvents.Failure -> showFailure(it.throwable)
                 is ContactsBookViewEvents.OnPoliciesRetrieved -> showConsentDialog(it)
             }
         }

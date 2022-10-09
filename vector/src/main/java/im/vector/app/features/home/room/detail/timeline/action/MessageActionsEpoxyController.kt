@@ -54,7 +54,7 @@ import org.matrix.android.sdk.api.session.room.send.SendState
 import javax.inject.Inject
 
 /**
- * Epoxy controller for message action list
+ * Epoxy controller for message action list.
  */
 class MessageActionsEpoxyController @Inject constructor(
         private val stringProvider: StringProvider,
@@ -126,7 +126,7 @@ class MessageActionsEpoxyController @Inject constructor(
         }
 
         when (state.informationData.e2eDecoration) {
-            E2EDecoration.WARN_IN_CLEAR        -> {
+            E2EDecoration.WARN_IN_CLEAR -> {
                 bottomSheetSendStateItem {
                     id("e2e_clear")
                     showProgress(false)
@@ -143,7 +143,15 @@ class MessageActionsEpoxyController @Inject constructor(
                     drawableStart(R.drawable.ic_shield_warning_small)
                 }
             }
-            else                               -> {
+            E2EDecoration.WARN_UNSAFE_KEY -> {
+                bottomSheetSendStateItem {
+                    id("e2e_unsafe")
+                    showProgress(false)
+                    text(host.stringProvider.getString(R.string.key_authenticity_not_guaranteed))
+                    drawableStart(R.drawable.ic_shield_gray)
+                }
+            }
+            else -> {
                 // nothing
             }
         }

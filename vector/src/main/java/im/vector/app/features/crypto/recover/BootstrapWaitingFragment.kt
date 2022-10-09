@@ -21,11 +21,12 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import com.airbnb.mvrx.parentFragmentViewModel
 import com.airbnb.mvrx.withState
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.core.platform.VectorBaseFragment
 import im.vector.app.databinding.FragmentBootstrapWaitingBinding
-import javax.inject.Inject
 
-class BootstrapWaitingFragment @Inject constructor() :
+@AndroidEntryPoint
+class BootstrapWaitingFragment :
         VectorBaseFragment<FragmentBootstrapWaitingBinding>() {
 
     override fun getBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentBootstrapWaitingBinding {
@@ -45,7 +46,7 @@ class BootstrapWaitingFragment @Inject constructor() :
 //                bootstrapLoadingStatusText.isVisible = false
 //                bootstrapDescriptionText.isVisible = false
 //            }
-            else                          -> {
+            else -> {
                 // just show the spinner
                 views.bootstrapLoadingStatusText.isVisible = false
                 views.bootstrapDescriptionText.isVisible = false

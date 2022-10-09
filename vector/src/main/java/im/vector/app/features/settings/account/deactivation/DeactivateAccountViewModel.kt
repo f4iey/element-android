@@ -23,28 +23,25 @@ import dagger.assisted.AssistedInject
 import im.vector.app.core.di.MavericksAssistedViewModelFactory
 import im.vector.app.core.di.hiltMavericksViewModelFactory
 import im.vector.app.core.platform.VectorViewModel
-import im.vector.app.features.auth.ReAuthActivity
+import im.vector.app.features.auth.PendingAuthHandler
 import kotlinx.coroutines.launch
 import org.matrix.android.sdk.api.auth.UIABaseAuth
 import org.matrix.android.sdk.api.auth.UserInteractiveAuthInterceptor
-import org.matrix.android.sdk.api.auth.UserPasswordAuth
 import org.matrix.android.sdk.api.auth.registration.RegistrationFlowResponse
 import org.matrix.android.sdk.api.failure.isInvalidUIAAuth
 import org.matrix.android.sdk.api.session.Session
 import org.matrix.android.sdk.api.session.uia.DefaultBaseAuth
-import org.matrix.android.sdk.api.session.uia.exceptions.UiaCancelledException
-import org.matrix.android.sdk.api.util.fromBase64
-import timber.log.Timber
 import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 data class DeactivateAccountViewState(
         val dummy: Boolean = false
 ) : MavericksState
 
-class DeactivateAccountViewModel @AssistedInject constructor(@Assisted private val initialState: DeactivateAccountViewState,
-                                                             private val session: Session) :
+class DeactivateAccountViewModel @AssistedInject constructor(
+        @Assisted private val initialState: DeactivateAccountViewState,
+        private val session: Session,
+        private val pendingAuthHandler: PendingAuthHandler,
+) :
         VectorViewModel<DeactivateAccountViewState, DeactivateAccountAction, DeactivateAccountViewEvents>(initialState) {
 
     @AssistedFactory
@@ -52,39 +49,18 @@ class DeactivateAccountViewModel @AssistedInject constructor(@Assisted private v
         override fun create(initialState: DeactivateAccountViewState): DeactivateAccountViewModel
     }
 
-    var uiaContinuation: Continuation<UIABaseAuth>? = null
-    var pendingAuth: UIABaseAuth? = null
-
     override fun handle(action: DeactivateAccountAction) {
         when (action) {
             is DeactivateAccountAction.DeactivateAccount -> handleDeactivateAccount(action)
-            DeactivateAccountAction.SsoAuthDone          -> {
-                Timber.d("## UIA - FallBack success")
+            DeactivateAccountAction.SsoAuthDone -> {
                 _viewEvents.post(DeactivateAccountViewEvents.Loading())
-                if (pendingAuth != null) {
-                    uiaContinuation?.resume(pendingAuth!!)
-                } else {
-                    uiaContinuation?.resumeWithException(IllegalArgumentException())
-                }
+                pendingAuthHandler.ssoAuthDone()
             }
-            is DeactivateAccountAction.PasswordAuthDone  -> {
+            is DeactivateAccountAction.PasswordAuthDone -> {
                 _viewEvents.post(DeactivateAccountViewEvents.Loading())
-                val decryptedPass = session.secureStorageService()
-                        .loadSecureSecret<String>(action.password.fromBase64().inputStream(), ReAuthActivity.DEFAULT_RESULT_KEYSTORE_ALIAS)
-                uiaContinuation?.resume(
-                        UserPasswordAuth(
-                                session = pendingAuth?.session,
-                                password = decryptedPass,
-                                user = session.myUserId
-                        )
-                )
+                pendingAuthHandler.passwordAuthDone(action.password)
             }
-            DeactivateAccountAction.ReAuthCancelled      -> {
-                Timber.d("## UIA - Reauth cancelled")
-                uiaContinuation?.resumeWithException(UiaCancelledException())
-                uiaContinuation = null
-                pendingAuth = null
-            }
+            DeactivateAccountAction.ReAuthCancelled -> pendingAuthHandler.reAuthCancelled()
         }
     }
 
@@ -98,8 +74,8 @@ class DeactivateAccountViewModel @AssistedInject constructor(@Assisted private v
                         object : UserInteractiveAuthInterceptor {
                             override fun performStage(flowResponse: RegistrationFlowResponse, errCode: String?, promise: Continuation<UIABaseAuth>) {
                                 _viewEvents.post(DeactivateAccountViewEvents.RequestReAuth(flowResponse, errCode))
-                                pendingAuth = DefaultBaseAuth(session = flowResponse.session)
-                                uiaContinuation = promise
+                                pendingAuthHandler.pendingAuth = DefaultBaseAuth(session = flowResponse.session)
+                                pendingAuthHandler.uiaContinuation = promise
                             }
                         }
                 )

@@ -17,13 +17,15 @@
 package im.vector.app.features.crypto.quads
 
 import com.airbnb.mvrx.Uninitialized
-import com.airbnb.mvrx.test.MvRxTestRule
+import com.airbnb.mvrx.test.MavericksTestRule
 import im.vector.app.test.fakes.FakeSession
 import im.vector.app.test.fakes.FakeStringProvider
 import im.vector.app.test.test
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
+import org.matrix.android.sdk.api.Matrix
 import org.matrix.android.sdk.api.session.securestorage.IntegrityResult
 import org.matrix.android.sdk.api.session.securestorage.KeyInfo
 import org.matrix.android.sdk.api.session.securestorage.KeyInfoResult
@@ -40,10 +42,11 @@ private val KEY_INFO_WITHOUT_PASSPHRASE = KeyInfo(id = "id", content = SecretSto
 class SharedSecureStorageViewModelTest {
 
     @get:Rule
-    val mvrxTestRule = MvRxTestRule()
+    val mavericksTestRule = MavericksTestRule()
 
     private val stringProvider = FakeStringProvider()
     private val fakeSession = FakeSession()
+    private val matrix: Matrix = mockk()
     val args = SharedSecureStorageActivity.Args(keyId = null, emptyList(), "alias")
 
     @Test
@@ -156,7 +159,8 @@ class SharedSecureStorageViewModelTest {
         return SharedSecureStorageViewModel(
                 SharedSecureStorageViewState(args),
                 stringProvider.instance,
-                fakeSession
+                fakeSession,
+                matrix,
         )
     }
 

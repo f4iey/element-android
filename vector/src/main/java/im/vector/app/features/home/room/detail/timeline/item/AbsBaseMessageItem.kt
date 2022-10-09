@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.IdRes
+import androidx.annotation.LayoutRes
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat.getDrawable
 import androidx.core.view.isVisible
@@ -39,7 +40,6 @@ import im.vector.app.features.home.room.detail.timeline.TimelineEventController
 import im.vector.app.features.home.room.detail.timeline.view.TimelineMessageLayoutRenderer
 import im.vector.app.features.reactions.widget.ReactionButton
 import im.vector.app.features.themes.ThemeUtils
-import org.matrix.android.sdk.api.session.crypto.model.RoomEncryptionTrustLevel
 import org.matrix.android.sdk.api.session.room.send.SendState
 
 private const val MAX_REACTIONS_TO_SHOW = 8
@@ -49,7 +49,7 @@ private const val MAX_REACTIONS_TO_SHOW = 8
  * Manages associated click listeners and send status.
  * Should not be used as this, use a subclass.
  */
-abstract class AbsBaseMessageItem<H : AbsBaseMessageItem.Holder> : BaseEventItem<H>() {
+abstract class AbsBaseMessageItem<H : AbsBaseMessageItem.Holder>(@LayoutRes layoutId: Int) : BaseEventItem<H>(layoutId) {
 
     abstract val baseAttributes: Attributes
 
@@ -79,17 +79,7 @@ abstract class AbsBaseMessageItem<H : AbsBaseMessageItem.Holder> : BaseEventItem
     override fun bind(holder: H) {
         super.bind(holder)
         renderReactions(holder, baseAttributes.informationData.reactionsSummary)
-        when (baseAttributes.informationData.e2eDecoration) {
-            E2EDecoration.NONE                 -> {
-                holder.e2EDecorationView.render(null)
-            }
-            E2EDecoration.WARN_IN_CLEAR,
-            E2EDecoration.WARN_SENT_BY_UNVERIFIED,
-            E2EDecoration.WARN_SENT_BY_UNKNOWN -> {
-                holder.e2EDecorationView.render(RoomEncryptionTrustLevel.Warning)
-            }
-        }
-
+        holder.e2EDecorationView.renderE2EDecoration(baseAttributes.informationData.e2eDecoration)
         holder.view.onClick(baseAttributes.itemClickListener)
         holder.view.setOnLongClickListener(baseAttributes.itemLongClickListener)
         (holder.view as? TimelineMessageLayoutRenderer)?.renderMessageLayout(baseAttributes.informationData.messageLayout)

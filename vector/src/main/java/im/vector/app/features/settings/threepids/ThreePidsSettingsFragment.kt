@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.airbnb.mvrx.fragmentViewModel
 import com.airbnb.mvrx.withState
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.extensions.cleanup
 import im.vector.app.core.extensions.configureWith
@@ -41,12 +42,13 @@ import org.matrix.android.sdk.api.auth.data.LoginFlowTypes
 import org.matrix.android.sdk.api.session.identity.ThreePid
 import javax.inject.Inject
 
-class ThreePidsSettingsFragment @Inject constructor(
-        private val epoxyController: ThreePidsSettingsController
-) :
+@AndroidEntryPoint
+class ThreePidsSettingsFragment :
         VectorBaseFragment<FragmentGenericRecyclerBinding>(),
         OnBackPressed,
         ThreePidsSettingsController.InteractionListener {
+
+    @Inject lateinit var epoxyController: ThreePidsSettingsController
 
     private val viewModel: ThreePidsSettingsViewModel by fragmentViewModel()
 
@@ -61,7 +63,7 @@ class ThreePidsSettingsFragment @Inject constructor(
 
         viewModel.observeViewEvents {
             when (it) {
-                is ThreePidsSettingsViewEvents.Failure       -> displayErrorDialog(it.throwable)
+                is ThreePidsSettingsViewEvents.Failure -> displayErrorDialog(it.throwable)
                 is ThreePidsSettingsViewEvents.RequestReAuth -> askAuthentication(it)
             }
         }
@@ -81,14 +83,14 @@ class ThreePidsSettingsFragment @Inject constructor(
     private val reAuthActivityResultLauncher = registerStartForActivityResult { activityResult ->
         if (activityResult.resultCode == Activity.RESULT_OK) {
             when (activityResult.data?.extras?.getString(ReAuthActivity.RESULT_FLOW_TYPE)) {
-                LoginFlowTypes.SSO      -> {
+                LoginFlowTypes.SSO -> {
                     viewModel.handle(ThreePidsSettingsAction.SsoAuthDone)
                 }
                 LoginFlowTypes.PASSWORD -> {
                     val password = activityResult.data?.extras?.getString(ReAuthActivity.RESULT_VALUE) ?: ""
                     viewModel.handle(ThreePidsSettingsAction.PasswordAuthDone(password))
                 }
-                else                    -> {
+                else -> {
                     viewModel.handle(ThreePidsSettingsAction.ReAuthCancelled)
                 }
             }

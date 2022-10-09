@@ -45,7 +45,7 @@ data class RoomSettingsViewState(
         val showSaveAction: Boolean = false,
         val actionPermissions: ActionPermissions = ActionPermissions(),
         val supportsRestricted: Boolean = false,
-        val canUpgradeToRestricted: Boolean = false
+        val canUpgradeToRestricted: Boolean = false,
 ) : MavericksState {
 
     constructor(args: RoomProfileArgs) : this(roomId = args.roomId)
@@ -62,8 +62,10 @@ data class RoomSettingsViewState(
     sealed class AvatarAction {
         object None : AvatarAction()
         object DeleteAvatar : AvatarAction()
-        data class UpdateAvatar(val newAvatarUri: Uri,
-                                val newAvatarFileName: String) : AvatarAction()
+        data class UpdateAvatar(
+                val newAvatarUri: Uri,
+                val newAvatarFileName: String
+        ) : AvatarAction()
     }
 
     data class NewJoinRule(
@@ -75,19 +77,19 @@ data class RoomSettingsViewState(
 
     fun getJoinRuleWording(stringProvider: StringProvider): String {
         return when (val joinRule = newRoomJoinRules.newJoinRules ?: currentRoomJoinRules) {
-            RoomJoinRules.INVITE     -> {
+            RoomJoinRules.INVITE -> {
                 stringProvider.getString(R.string.room_settings_room_access_private_title)
             }
-            RoomJoinRules.PUBLIC     -> {
+            RoomJoinRules.PUBLIC -> {
                 stringProvider.getString(R.string.room_settings_room_access_public_title)
             }
-            RoomJoinRules.KNOCK      -> {
+            RoomJoinRules.KNOCK -> {
                 stringProvider.getString(R.string.room_settings_room_access_entry_knock)
             }
             RoomJoinRules.RESTRICTED -> {
                 stringProvider.getString(R.string.room_settings_room_access_restricted_title)
             }
-            else                     -> {
+            else -> {
                 stringProvider.getString(R.string.room_settings_room_access_entry_unknown, joinRule.value)
             }
         }

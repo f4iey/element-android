@@ -49,7 +49,7 @@ class VerificationConclusionController @Inject constructor(
         val host = this
 
         when (state.conclusionState) {
-            ConclusionState.SUCCESS   -> {
+            ConclusionState.SUCCESS -> {
                 bottomSheetVerificationNoticeItem {
                     id("notice")
                     notice(
@@ -68,7 +68,7 @@ class VerificationConclusionController @Inject constructor(
 
                 bottomDone()
             }
-            ConclusionState.WARNING   -> {
+            ConclusionState.WARNING -> {
                 bottomSheetVerificationNoticeItem {
                     id("notice")
                     notice(host.stringProvider.getString(R.string.verification_conclusion_not_secure).toEpoxyCharSequence())
@@ -84,7 +84,15 @@ class VerificationConclusionController @Inject constructor(
                     notice(host.eventHtmlRenderer.render(host.stringProvider.getString(R.string.verification_conclusion_compromised)).toEpoxyCharSequence())
                 }
 
-                bottomDone()
+                bottomGotIt()
+            }
+            ConclusionState.INVALID_QR_CODE -> {
+                bottomSheetVerificationNoticeItem {
+                    id("invalid_qr")
+                    notice(host.stringProvider.getString(R.string.verify_invalid_qr_notice).toEpoxyCharSequence())
+                }
+
+                bottomGotIt()
             }
             ConclusionState.CANCELLED -> {
                 bottomSheetVerificationNoticeItem {
@@ -92,18 +100,7 @@ class VerificationConclusionController @Inject constructor(
                     notice(host.stringProvider.getString(R.string.verify_cancelled_notice).toEpoxyCharSequence())
                 }
 
-                bottomSheetDividerItem {
-                    id("sep0")
-                }
-
-                bottomSheetVerificationActionItem {
-                    id("got_it")
-                    title(host.stringProvider.getString(R.string.sas_got_it))
-                    titleColor(host.colorProvider.getColorFromAttribute(R.attr.colorPrimary))
-                    iconRes(R.drawable.ic_arrow_right)
-                    iconColor(host.colorProvider.getColorFromAttribute(R.attr.colorPrimary))
-                    listener { host.listener?.onButtonTapped() }
-                }
+                bottomGotIt()
             }
         }
     }
@@ -120,11 +117,27 @@ class VerificationConclusionController @Inject constructor(
             titleColor(host.colorProvider.getColorFromAttribute(R.attr.vctr_content_primary))
             iconRes(R.drawable.ic_arrow_right)
             iconColor(host.colorProvider.getColorFromAttribute(R.attr.vctr_content_primary))
-            listener { host.listener?.onButtonTapped() }
+            listener { host.listener?.onButtonTapped(true) }
+        }
+    }
+
+    private fun bottomGotIt() {
+        val host = this
+        bottomSheetDividerItem {
+            id("sep0")
+        }
+
+        bottomSheetVerificationActionItem {
+            id("got_it")
+            title(host.stringProvider.getString(R.string.sas_got_it))
+            titleColor(host.colorProvider.getColorFromAttribute(R.attr.vctr_content_primary))
+            iconRes(R.drawable.ic_arrow_right)
+            iconColor(host.colorProvider.getColorFromAttribute(R.attr.vctr_content_primary))
+            listener { host.listener?.onButtonTapped(false) }
         }
     }
 
     interface Listener {
-        fun onButtonTapped()
+        fun onButtonTapped(success: Boolean)
     }
 }

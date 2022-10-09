@@ -22,7 +22,9 @@ import io.realm.Realm
 import io.realm.RealmConfiguration
 import io.realm.RealmResults
 import io.realm.kotlin.createObject
+import io.realm.kotlin.executeTransactionAwait
 import kotlinx.coroutines.CompletableDeferred
+import org.matrix.android.sdk.api.MatrixCoroutineDispatchers
 import org.matrix.android.sdk.api.extensions.orFalse
 import org.matrix.android.sdk.api.failure.Failure
 import org.matrix.android.sdk.api.failure.MatrixError
@@ -41,6 +43,7 @@ import org.matrix.android.sdk.internal.database.query.findAllIncludingEvents
 import org.matrix.android.sdk.internal.database.query.findLastForwardChunkOfThread
 import org.matrix.android.sdk.internal.database.query.where
 import org.matrix.android.sdk.internal.session.room.relation.threads.FetchThreadTimelineTask
+import org.matrix.android.sdk.internal.session.room.state.StateEventDataSource
 import org.matrix.android.sdk.internal.session.sync.handler.room.ThreadsAwarenessHandler
 import org.matrix.android.sdk.internal.util.time.Clock
 import timber.log.Timber
@@ -100,7 +103,9 @@ internal class LoadTimelineStrategy constructor(
             val onEventsUpdated: (Boolean) -> Unit,
             val onEventsDeleted: () -> Unit,
             val onLimitedTimeline: () -> Unit,
-            val onNewTimelineEvents: (List<String>) -> Unit
+            val onNewTimelineEvents: (List<String>) -> Unit,
+            val stateEventDataSource: StateEventDataSource,
+            val matrixCoroutineDispatchers: MatrixCoroutineDispatchers,
     )
 
     private var getContextLatch: CompletableDeferred<Unit>? = null
@@ -165,7 +170,13 @@ internal class LoadTimelineStrategy constructor(
             onEventsUpdated = dependencies.onEventsUpdated
     )
 
-    fun onStart() {
+    private val liveRoomStateListener = LiveRoomStateListener(
+            roomId,
+            dependencies.stateEventDataSource,
+            dependencies.matrixCoroutineDispatchers.main
+    )
+
+    suspend fun onStart() {
         dependencies.eventDecryptor.start()
         dependencies.timelineInput.listeners.add(timelineInputListener)
         val realm = dependencies.realm.get()
@@ -174,9 +185,13 @@ internal class LoadTimelineStrategy constructor(
             it.addChangeListener(chunkEntityListener)
             timelineChunk = it.createTimelineChunk()
         }
+
+        if (dependencies.timelineSettings.useLiveSenderInfo) {
+            liveRoomStateListener.start()
+        }
     }
 
-    fun onStop() {
+    suspend fun onStop() {
         dependencies.eventDecryptor.destroy()
         dependencies.timelineInput.listeners.remove(timelineInputListener)
         chunkEntity?.removeChangeListener(chunkEntityListener)
@@ -187,6 +202,9 @@ internal class LoadTimelineStrategy constructor(
         timelineChunk = null
         if (mode is Mode.Thread) {
             clearThreadChunkEntity(dependencies.realm.get(), mode.rootThreadEventId)
+        }
+        if (dependencies.timelineSettings.useLiveSenderInfo) {
+            liveRoomStateListener.stop()
         }
     }
 
@@ -222,7 +240,22 @@ internal class LoadTimelineStrategy constructor(
     }
 
     fun buildSnapshot(): List<TimelineEvent> {
-        return buildSendingEvents() + timelineChunk?.builtItems(includesNext = true, includesPrev = true).orEmpty()
+        val events = buildSendingEvents() + timelineChunk?.builtItems(includesNext = true, includesPrev = true).orEmpty()
+        return if (dependencies.timelineSettings.useLiveSenderInfo) {
+            events.map(this::applyLiveRoomState)
+        } else {
+            events
+        }
+    }
+
+    private fun applyLiveRoomState(event: TimelineEvent): TimelineEvent {
+        val updatedState = liveRoomStateListener.getLiveState(event.senderInfo.userId)
+        return if (updatedState != null) {
+            val updatedSenderInfo = event.senderInfo.copy(avatarUrl = updatedState.avatarUrl, displayName = updatedState.displayName)
+            event.copy(senderInfo = updatedSenderInfo)
+        } else {
+            event
+        }
     }
 
     private fun buildSendingEvents(): List<TimelineEvent> {
@@ -233,9 +266,9 @@ internal class LoadTimelineStrategy constructor(
         }
     }
 
-    private fun getChunkEntity(realm: Realm): RealmResults<ChunkEntity> {
+    private suspend fun getChunkEntity(realm: Realm): RealmResults<ChunkEntity> {
         return when (mode) {
-            is Mode.Live      -> {
+            is Mode.Live -> {
                 ChunkEntity.where(realm, roomId)
                         .equalTo(ChunkEntityFields.IS_LAST_FORWARD, true)
                         .findAll()
@@ -243,7 +276,7 @@ internal class LoadTimelineStrategy constructor(
             is Mode.Permalink -> {
                 ChunkEntity.findAllIncludingEvents(realm, listOf(mode.originEventId))
             }
-            is Mode.Thread    -> {
+            is Mode.Thread -> {
                 recreateThreadChunkEntity(realm, mode.rootThreadEventId)
                 ChunkEntity.where(realm, roomId)
                         .equalTo(ChunkEntityFields.ROOT_THREAD_EVENT_ID, mode.rootThreadEventId)
@@ -255,10 +288,10 @@ internal class LoadTimelineStrategy constructor(
 
     /**
      * Clear any existing thread chunk entity and create a new one, with the
-     * rootThreadEventId included
+     * rootThreadEventId included.
      */
-    private fun recreateThreadChunkEntity(realm: Realm, rootThreadEventId: String) {
-        realm.executeTransaction {
+    private suspend fun recreateThreadChunkEntity(realm: Realm, rootThreadEventId: String) {
+        realm.executeTransactionAwait {
             // Lets delete the chunk and start a new one
             ChunkEntity.findLastForwardChunkOfThread(it, roomId, rootThreadEventId)?.deleteAndClearThreadEvents()?.let {
                 Timber.i("###THREADS LoadTimelineStrategy [onStart] thread chunk cleared..")
@@ -275,10 +308,10 @@ internal class LoadTimelineStrategy constructor(
     }
 
     /**
-     * Clear any existing thread chunk
+     * Clear any existing thread chunk.
      */
-    private fun clearThreadChunkEntity(realm: Realm, rootThreadEventId: String) {
-        realm.executeTransaction {
+    private suspend fun clearThreadChunkEntity(realm: Realm, rootThreadEventId: String) {
+        realm.executeTransactionAwait {
             ChunkEntity.findLastForwardChunkOfThread(it, roomId, rootThreadEventId)?.deleteAndClearThreadEvents()?.let {
                 Timber.i("###THREADS LoadTimelineStrategy [onStop] thread chunk cleared..")
             }

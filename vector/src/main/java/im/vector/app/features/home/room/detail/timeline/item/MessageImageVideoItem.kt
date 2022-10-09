@@ -34,8 +34,9 @@ import im.vector.app.features.home.room.detail.timeline.helper.ContentUploadStat
 import im.vector.app.features.home.room.detail.timeline.style.TimelineMessageLayout
 import im.vector.app.features.home.room.detail.timeline.style.granularRoundedCorners
 import im.vector.app.features.media.ImageContentRenderer
+import org.matrix.android.sdk.api.session.room.model.message.MessageType
 
-@EpoxyModelClass(layout = R.layout.item_timeline_event_base)
+@EpoxyModelClass
 abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Holder>() {
 
     @EpoxyAttribute
@@ -80,7 +81,17 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         ViewCompat.setTransitionName(holder.imageView, "imagePreview_${id()}")
         holder.mediaContentView.onClick(attributes.itemClickListener)
         holder.mediaContentView.setOnLongClickListener(attributes.itemLongClickListener)
-        holder.playContentView.visibility = if (playable) View.VISIBLE else View.GONE
+
+        val isImageMessage = attributes.informationData.messageType in listOf(MessageType.MSGTYPE_IMAGE, MessageType.MSGTYPE_STICKER_LOCAL)
+        val autoplayAnimatedImages = attributes.autoplayAnimatedImages
+
+        holder.playContentView.visibility = if (playable && isImageMessage && autoplayAnimatedImages) {
+            View.GONE
+        } else if (playable) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
     }
 
     override fun unbind(holder: Holder) {
@@ -102,6 +113,6 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
     }
 
     companion object {
-        private const val STUB_ID = R.id.messageContentMediaStub
+        private val STUB_ID = R.id.messageContentMediaStub
     }
 }

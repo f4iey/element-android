@@ -18,11 +18,13 @@ package im.vector.app.test.fakes
 
 import io.mockk.coEvery
 import io.mockk.coJustRun
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import org.matrix.android.sdk.api.auth.AuthenticationService
 import org.matrix.android.sdk.api.auth.data.HomeServerConnectionConfig
 import org.matrix.android.sdk.api.auth.data.LoginFlowResult
+import org.matrix.android.sdk.api.auth.login.LoginWizard
 import org.matrix.android.sdk.api.auth.registration.RegistrationWizard
 import org.matrix.android.sdk.api.auth.wellknown.WellknownResult
 
@@ -33,7 +35,11 @@ class FakeAuthenticationService : AuthenticationService by mockk() {
     }
 
     fun givenRegistrationStarted(started: Boolean) {
-        every { isRegistrationStarted } returns started
+        every { isRegistrationStarted() } returns started
+    }
+
+    fun givenLoginWizard(loginWizard: LoginWizard) {
+        every { getLoginWizard() } returns loginWizard
     }
 
     fun givenLoginFlow(config: HomeServerConnectionConfig, result: LoginFlowResult) {
@@ -62,5 +68,17 @@ class FakeAuthenticationService : AuthenticationService by mockk() {
 
     fun givenDirectAuthenticationThrows(config: HomeServerConnectionConfig, matrixId: String, password: String, deviceName: String, cause: Throwable) {
         coEvery { directAuthentication(config, matrixId, password, deviceName) } throws cause
+    }
+
+    fun verifyReset() {
+        coVerify { reset() }
+    }
+
+    fun verifyCancelsPendingLogin() {
+        coVerify { cancelPendingLoginOrRegistration() }
+    }
+
+    fun givenSsoUrl(redirectUri: String, deviceId: String, providerId: String, result: String) {
+        coEvery { getSsoUrl(redirectUri, deviceId, providerId) } returns result
     }
 }

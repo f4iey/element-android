@@ -20,16 +20,18 @@ import androidx.annotation.StringRes
 import im.vector.app.R
 
 /**
- * Defines the command line operations
- * the user can write theses messages to perform some actions
- * the list will be displayed in this order
+ * Defines the command line operations.
+ * The user can write theses messages to perform some actions.
+ * The list will be displayed in this order.
  */
-enum class Command(val command: String,
-                   val aliases: Array<CharSequence>?,
-                   val parameters: String,
-                   @StringRes val description: Int,
-                   val isDevCommand: Boolean,
-                   val isThreadCommand: Boolean) {
+enum class Command(
+        val command: String,
+        val aliases: Array<CharSequence>?,
+        val parameters: String,
+        @StringRes val description: Int,
+        val isDevCommand: Boolean,
+        val isThreadCommand: Boolean
+) {
     EMOTE("/me", null, "<message>", R.string.command_description_emote, false, true),
     BAN_USER("/ban", null, "<user-id> [reason]", R.string.command_description_ban_user, false, false),
     UNBAN_USER("/unban", null, "<user-id> [reason]", R.string.command_description_unban_user, false, false),
@@ -50,6 +52,7 @@ enum class Command(val command: String,
     MARKDOWN("/markdown", null, "<on|off>", R.string.command_description_markdown, false, false),
     RAINBOW("/rainbow", null, "<message>", R.string.command_description_rainbow, false, true),
     RAINBOW_EMOTE("/rainbowme", null, "<message>", R.string.command_description_rainbow_emote, false, true),
+    DEVTOOLS("/devtools", null, "", R.string.command_description_devtools, true, false),
     CLEAR_SCALAR_TOKEN("/clear_scalar_token", null, "", R.string.command_description_clear_scalar_token, false, false),
     SPOILER("/spoiler", null, "<message>", R.string.command_description_spoiler, false, true),
     SHRUG("/shrug", null, "<message>", R.string.command_description_shrug, false, true),
@@ -63,7 +66,8 @@ enum class Command(val command: String,
     ADD_TO_SPACE("/addToSpace", null, "spaceId", R.string.command_description_add_to_space, true, false),
     JOIN_SPACE("/joinSpace", null, "spaceId", R.string.command_description_join_space, true, false),
     LEAVE_ROOM("/leave", null, "<roomId?>", R.string.command_description_leave_room, true, false),
-    UPGRADE_ROOM("/upgraderoom", null, "newVersion", R.string.command_description_upgrade_room, true, false);
+    UPGRADE_ROOM("/upgraderoom", null, "newVersion", R.string.command_description_upgrade_room, true, false),
+    TABLE_FLIP("/tableflip", null, "<message>", R.string.command_description_table_flip, false, true);
 
     val allAliases = arrayOf(command, *aliases.orEmpty())
 

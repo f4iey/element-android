@@ -33,10 +33,10 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * This worker creates a new work for each events passed in parameter
+ * This worker creates a new work for each events passed in parameter.
  *
- * Possible previous worker: Always [UploadContentWorker]
- * Possible next worker    : None, but it will post new work to send events, encrypted or not
+ * Possible previous worker: Always [UploadContentWorker].
+ * Possible next worker    : None, but it will post new work to send events, encrypted or not.
  */
 internal class MultipleEventSendingDispatcherWorker(context: Context, params: WorkerParameters, sessionManager: SessionManager) :
         SessionSafeCoroutineWorker<MultipleEventSendingDispatcherWorker.Params>(context, params, sessionManager, Params::class.java) {
@@ -53,7 +53,7 @@ internal class MultipleEventSendingDispatcherWorker(context: Context, params: Wo
     @Inject lateinit var timelineSendEventWorkCommon: TimelineSendEventWorkCommon
     @Inject lateinit var localEchoRepository: LocalEchoRepository
 
-    override fun doOnError(params: Params): Result {
+    override fun doOnError(params: Params, failureMessage: String): Result {
         params.localEchoIds.forEach { localEchoIds ->
             localEchoRepository.updateSendState(
                     eventId = localEchoIds.eventId,
@@ -63,7 +63,7 @@ internal class MultipleEventSendingDispatcherWorker(context: Context, params: Wo
             )
         }
 
-        return super.doOnError(params)
+        return super.doOnError(params, failureMessage)
     }
 
     override fun injectWith(injector: SessionComponent) {
