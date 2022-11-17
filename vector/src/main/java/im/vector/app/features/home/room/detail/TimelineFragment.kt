@@ -32,7 +32,10 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.addCallback
+import androidx.annotation.StringRes
 import androidx.appcompat.view.menu.MenuBuilder
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.net.toUri
@@ -53,8 +56,8 @@ import com.airbnb.epoxy.OnModelBuildFinishedListener
 import com.airbnb.epoxy.addGlidePreloader
 import com.airbnb.epoxy.glidePreloader
 import com.airbnb.mvrx.Fail
-import com.airbnb.mvrx.activityViewModel
 import com.airbnb.mvrx.args
+import com.airbnb.mvrx.fragmentViewModel
 import com.airbnb.mvrx.withState
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,6 +67,7 @@ import im.vector.app.core.dialogs.ConfirmationDialogBuilder
 import im.vector.app.core.dialogs.GalleryOrCameraDialogHelper
 import im.vector.app.core.dialogs.GalleryOrCameraDialogHelperFactory
 import im.vector.app.core.epoxy.LayoutManagerStateRestorer
+import im.vector.app.core.extensions.animateLayoutChange
 import im.vector.app.core.extensions.cleanup
 import im.vector.app.core.extensions.commitTransaction
 import im.vector.app.core.extensions.containsRtLOverride
@@ -168,6 +172,7 @@ import im.vector.app.features.media.VideoContentRenderer
 import im.vector.app.features.notifications.NotificationDrawerManager
 import im.vector.app.features.notifications.NotificationUtils
 import im.vector.app.features.permalink.NavigationInterceptor
+import im.vector.app.features.permalink.PermalinkFactory
 import im.vector.app.features.permalink.PermalinkHandler
 import im.vector.app.features.poll.PollMode
 import im.vector.app.features.reactions.EmojiReactionPickerActivity
@@ -182,7 +187,9 @@ import im.vector.app.features.widgets.WidgetArgs
 import im.vector.app.features.widgets.WidgetKind
 import im.vector.app.features.widgets.permissions.RoomWidgetPermissionBottomSheet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -247,6 +254,7 @@ class TimelineFragment :
     @Inject lateinit var clock: Clock
     @Inject lateinit var vectorFeatures: VectorFeatures
     @Inject lateinit var galleryOrCameraDialogHelperFactory: GalleryOrCameraDialogHelperFactory
+    @Inject lateinit var permalinkFactory: PermalinkFactory
 
     companion object {
         const val MAX_TYPING_MESSAGE_USERS_COUNT = 4
@@ -256,8 +264,8 @@ class TimelineFragment :
 
     private val timelineArgs: TimelineArgs by args()
 
-    private val timelineViewModel: TimelineViewModel by activityViewModel()
-    private val messageComposerViewModel: MessageComposerViewModel by activityViewModel()
+    private val timelineViewModel: TimelineViewModel by fragmentViewModel()
+    private val messageComposerViewModel: MessageComposerViewModel by fragmentViewModel()
     private val debouncer = Debouncer(createUIHandler())
 
     private lateinit var scrollOnNewMessageCallback: ScrollOnNewMessageCallback
@@ -282,8 +290,6 @@ class TimelineFragment :
     private lateinit var callActionsHandler: StartCallActionsHandler
 
     private val currentCallsViewPresenter = CurrentCallsViewPresenter()
-    private val isEmojiKeyboardVisible: Boolean
-        get() = vectorPreferences.showEmojiKeyboard()
 
     private val lazyLoadedViews = RoomDetailLazyLoadedViews()
 
@@ -337,6 +343,7 @@ class TimelineFragment :
         setupJumpToBottomView()
         setupRemoveJitsiWidgetView()
         setupLiveLocationIndicator()
+        setupBackPressHandling()
 
         views.includeRoomToolbar.roomToolbarContentView.debouncedClicks {
             navigator.openRoomProfile(requireActivity(), timelineArgs.roomId)
@@ -413,6 +420,31 @@ class TimelineFragment :
 
         if (savedInstanceState == null) {
             handleSpaceShare()
+        }
+
+        views.scrim.setOnClickListener {
+            messageComposerViewModel.handle(MessageComposerAction.SetFullScreen(false))
+        }
+
+        messageComposerViewModel.stateFlow.map { it.isFullScreen }
+                .distinctUntilChanged()
+                .onEach { isFullScreen ->
+                    toggleFullScreenEditor(isFullScreen)
+                }
+                .launchIn(viewLifecycleOwner.lifecycleScope)
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            withState(messageComposerViewModel) { state ->
+                if (state.isFullScreen) {
+                    messageComposerViewModel.handle(MessageComposerAction.SetFullScreen(false))
+                } else {
+                    remove() // Remove callback to avoid infinite loop
+                    @Suppress("DEPRECATION")
+                    requireActivity().onBackPressed()
+                }
+            }
         }
     }
 
@@ -774,7 +806,7 @@ class TimelineFragment :
         }
         // We use a custom layout for this menu item, so we need to set a ClickListener
         menu.findItem(R.id.open_matrix_apps)?.let { menuItem ->
-            menuItem.actionView.debouncedClicks {
+            menuItem.actionView?.debouncedClicks {
                 handleMenuItemSelected(menuItem)
             }
         }
@@ -785,7 +817,7 @@ class TimelineFragment :
 
         // Custom thread notification menu item
         menu.findItem(R.id.menu_timeline_thread_list)?.let { menuItem ->
-            menuItem.actionView.debouncedClicks {
+            menuItem.actionView?.debouncedClicks {
                 handleMenuItemSelected(menuItem)
             }
         }
@@ -814,16 +846,16 @@ class TimelineFragment :
                 // icon should be default color no badge
                 val actionView = matrixAppsMenuItem.actionView
                 actionView
-                        .findViewById<ImageView>(R.id.action_view_icon_image)
-                        .setColorFilter(ThemeUtils.getColor(requireContext(), R.attr.vctr_content_secondary))
-                actionView.findViewById<TextView>(R.id.cart_badge).isVisible = false
+                        ?.findViewById<ImageView>(R.id.action_view_icon_image)
+                        ?.setColorFilter(ThemeUtils.getColor(requireContext(), R.attr.vctr_content_secondary))
+                actionView?.findViewById<TextView>(R.id.cart_badge)?.isVisible = false
                 matrixAppsMenuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
             } else {
                 val actionView = matrixAppsMenuItem.actionView
                 actionView
-                        .findViewById<ImageView>(R.id.action_view_icon_image)
-                        .setColorFilter(colorProvider.getColorFromAttribute(R.attr.colorPrimary))
-                actionView.findViewById<TextView>(R.id.cart_badge).setTextOrHide("$widgetsCount")
+                        ?.findViewById<ImageView>(R.id.action_view_icon_image)
+                        ?.setColorFilter(colorProvider.getColorFromAttribute(R.attr.colorPrimary))
+                actionView?.findViewById<TextView>(R.id.cart_badge)?.setTextOrHide("$widgetsCount")
                 @Suppress("AlwaysShowAction")
                 matrixAppsMenuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             }
@@ -869,7 +901,7 @@ class TimelineFragment :
             }
             R.id.menu_thread_timeline_copy_link -> {
                 getRootThreadEventId()?.let {
-                    val permalink = session.permalinkService().createPermalink(timelineArgs.roomId, it)
+                    val permalink = permalinkFactory.createPermalink(timelineArgs.roomId, it)
                     copyToClipboard(requireContext(), permalink, false)
                     showSnackWithMessage(getString(R.string.copied_to_clipboard))
                 }
@@ -881,7 +913,7 @@ class TimelineFragment :
             }
             R.id.menu_thread_timeline_share -> {
                 getRootThreadEventId()?.let {
-                    val permalink = session.permalinkService().createPermalink(timelineArgs.roomId, it)
+                    val permalink = permalinkFactory.createPermalink(timelineArgs.roomId, it)
                     shareText(requireContext(), permalink)
                 }
                 true
@@ -895,7 +927,7 @@ class TimelineFragment :
      */
     private fun updateMenuThreadNotificationBadge(menu: Menu, state: RoomDetailViewState) {
         val menuThreadList = menu.findItem(R.id.menu_timeline_thread_list).actionView
-        val badgeFrameLayout = menuThreadList.findViewById<FrameLayout>(R.id.threadNotificationBadgeFrameLayout)
+        val badgeFrameLayout = menuThreadList?.findViewById<FrameLayout>(R.id.threadNotificationBadgeFrameLayout) ?: return
         val badgeTextView = menuThreadList.findViewById<TextView>(R.id.threadNotificationBadgeTextView)
 
         val unreadThreadMessages = state.threadNotificationBadgeState.numberOfLocalUnreadThreads
@@ -1016,7 +1048,13 @@ class TimelineFragment :
             override fun onLayoutCompleted(state: RecyclerView.State) {
                 super.onLayoutCompleted(state)
                 updateJumpToReadMarkerViewVisibility()
-                jumpToBottomViewVisibilityManager.maybeShowJumpToBottomViewVisibilityWithDelay()
+                withState(messageComposerViewModel) { composerState ->
+                    if (!composerState.isFullScreen) {
+                        jumpToBottomViewVisibilityManager.maybeShowJumpToBottomViewVisibilityWithDelay()
+                    } else {
+                        jumpToBottomViewVisibilityManager.hideAndPreventVisibilityChangesWithScrolling()
+                    }
+                }
             }
         }.apply {
             // For local rooms, pin the view's content to the top edge (the layout is reversed)
@@ -1116,7 +1154,6 @@ class TimelineFragment :
         }
         val summary = mainState.asyncRoomSummary()
         renderToolbar(summary)
-        renderTypingMessageNotification(summary, mainState)
         views.removeJitsiWidgetView.render(mainState)
         if (mainState.hasFailedSending) {
             lazyLoadedViews.failedMessagesWarningView(inflateIfNeeded = true, createFailedMessagesWarningCallback())?.isVisible = true
@@ -1131,6 +1168,9 @@ class TimelineFragment :
             lazyLoadedViews.inviteView(false)?.isVisible = false
 
             if (mainState.tombstoneEvent == null) {
+                views.composerContainer.isInvisible = !messageComposerState.isComposerVisible
+                views.voiceMessageRecorderContainer.isVisible = messageComposerState.isVoiceMessageRecorderVisible
+
                 when (messageComposerState.canSendMessage) {
                     CanSendStatus.Allowed -> {
                         NotificationAreaView.State.Hidden
@@ -1186,17 +1226,7 @@ class TimelineFragment :
 
     private fun FragmentTimelineBinding.hideComposerViews() {
         composerContainer.isVisible = false
-    }
-
-    private fun renderTypingMessageNotification(roomSummary: RoomSummary?, state: RoomDetailViewState) {
-        if (!isThreadTimeLine() && roomSummary != null) {
-            views.typingMessageView.isInvisible = state.typingUsers.isNullOrEmpty()
-            state.typingUsers
-                    ?.take(MAX_TYPING_MESSAGE_USERS_COUNT)
-                    ?.let { senders -> views.typingMessageView.render(senders, avatarRenderer) }
-        } else {
-            views.typingMessageView.isInvisible = true
-        }
+        voiceMessageRecorderContainer.isVisible = false
     }
 
     private fun renderToolbar(roomSummary: RoomSummary?) {
@@ -1283,8 +1313,12 @@ class TimelineFragment :
     }
 
     private fun displayRoomDetailActionFailure(result: RoomDetailViewEvents.ActionFailure) {
+        @StringRes val titleResId = when (result.action) {
+            RoomDetailAction.VoiceBroadcastAction.Recording.Start -> R.string.error_voice_broadcast_unauthorized_title
+            else -> R.string.dialog_title_error
+        }
         MaterialAlertDialogBuilder(requireActivity())
-                .setTitle(R.string.dialog_title_error)
+                .setTitle(titleResId)
                 .setMessage(errorFormatter.toHumanReadable(result.throwable))
                 .setPositiveButton(R.string.ok, null)
                 .show()
@@ -1790,7 +1824,7 @@ class TimelineFragment :
                 }
             }
             is EventSharedAction.CopyPermalink -> {
-                val permalink = session.permalinkService().createPermalink(timelineArgs.roomId, action.eventId)
+                val permalink = permalinkFactory.createPermalink(timelineArgs.roomId, action.eventId)
                 copyToClipboard(requireContext(), permalink, false)
                 showSnackWithMessage(getString(R.string.copied_to_clipboard))
             }
@@ -2000,6 +2034,19 @@ class TimelineFragment :
                 startActivity(it)
             }
         }
+    }
+
+    private fun toggleFullScreenEditor(isFullScreen: Boolean) {
+        views.composerContainer.animateLayoutChange(200)
+
+        val constraintSet = ConstraintSet()
+        val constraintSetId = if (isFullScreen) {
+            R.layout.fragment_timeline_fullscreen
+        } else {
+            R.layout.fragment_timeline
+        }
+        constraintSet.clone(requireContext(), constraintSetId)
+        constraintSet.applyTo(views.rootConstraintLayout)
     }
 
     /**

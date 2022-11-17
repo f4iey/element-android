@@ -17,10 +17,12 @@
 package im.vector.app.test.fakes
 
 import androidx.lifecycle.MutableLiveData
+import im.vector.app.test.fixtures.CryptoDeviceInfoFixture.aCryptoDeviceInfo
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import org.matrix.android.sdk.api.MatrixCallback
+import org.matrix.android.sdk.api.auth.UserInteractiveAuthInterceptor
 import org.matrix.android.sdk.api.session.crypto.CryptoService
 import org.matrix.android.sdk.api.session.crypto.model.CryptoDeviceInfo
 import org.matrix.android.sdk.api.session.crypto.model.DeviceInfo
@@ -35,6 +37,7 @@ class FakeCryptoService(
     var cryptoDeviceInfos = mutableMapOf<String, CryptoDeviceInfo>()
     var cryptoDeviceInfoWithIdLiveData: MutableLiveData<Optional<CryptoDeviceInfo>> = MutableLiveData()
     var myDevicesInfoWithIdLiveData: MutableLiveData<Optional<DeviceInfo>> = MutableLiveData()
+    var cryptoDeviceInfo = aCryptoDeviceInfo()
 
     override fun crossSigningService() = fakeCrossSigningService
 
@@ -68,17 +71,24 @@ class FakeCryptoService(
         }
     }
 
-    fun givenDeleteDeviceSucceeds(deviceId: String) {
-        val matrixCallback = slot<MatrixCallback<Unit>>()
-        every { deleteDevice(deviceId, any(), capture(matrixCallback)) } answers {
+    fun givenDeleteDevicesSucceeds(deviceIds: List<String>) {
+        every { deleteDevices(deviceIds, any(), any()) } answers {
             thirdArg<MatrixCallback<Unit>>().onSuccess(Unit)
         }
     }
 
-    fun givenDeleteDeviceFailsWithError(deviceId: String, error: Exception) {
-        val matrixCallback = slot<MatrixCallback<Unit>>()
-        every { deleteDevice(deviceId, any(), capture(matrixCallback)) } answers {
+    fun givenDeleteDevicesNeedsUIAuth(deviceIds: List<String>) {
+        every { deleteDevices(deviceIds, any(), any()) } answers {
+            secondArg<UserInteractiveAuthInterceptor>().performStage(mockk(), "", mockk())
+            thirdArg<MatrixCallback<Unit>>().onSuccess(Unit)
+        }
+    }
+
+    fun givenDeleteDevicesFailsWithError(deviceIds: List<String>, error: Exception) {
+        every { deleteDevices(deviceIds, any(), any()) } answers {
             thirdArg<MatrixCallback<Unit>>().onFailure(error)
         }
     }
+
+    override fun getMyDevice() = cryptoDeviceInfo
 }
