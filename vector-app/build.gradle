@@ -238,7 +238,7 @@ android {
         debug {
             applicationIdSuffix ".debug"
             signingConfig signingConfigs.debug
-            resValue "string", "app_name", "Element dbg"
+            resValue "string", "app_name", "Element Hamnet dbg"
             resValue "color", "launcher_background", "#0DBD8B"
 
             if (project.hasProperty("coverage")) {
@@ -247,7 +247,7 @@ android {
         }
 
         release {
-            resValue "string", "app_name", "Element"
+            resValue "string", "app_name", "Element Hamnet"
             resValue "color", "launcher_background", "#0DBD8B"
             postprocessing {
                 removeUnusedCode true
